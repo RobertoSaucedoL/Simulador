@@ -5,25 +5,47 @@ import streamlit as st
 import google.generativeai as genai
 
 # --- CONFIGURACIÓN INICIAL ---
-# Configuración inicial de la página para un layout amplio y sidebar expandido
 st.set_page_config(page_title="Simulador Financiero Jerárquico PORTAWARE", layout="wide", initial_sidebar_state="expanded")
 
-# --- OCULTAR ELEMENTOS POR DEFECTO DE STREAMLIT (para una interfaz más limpia y profesional) ---
-# Este bloque de CSS se inyecta en la aplicación para ocultar el menú principal,
-# el pie de página "Made with Streamlit" y cualquier botón de despliegue o icono de GitHub.
+# --- OCULTAR ELEMENTOS POR DEFECTO DE STREAMLIT (VERSION MÁS AGRESIVA) ---
 hide_st_style = """
 <style>
+/* Oculta el menú principal de hamburguesa */
 #MainMenu {visibility: hidden;}
+
+/* Oculta el pie de página "Made with Streamlit" */
 footer {visibility: hidden;}
+
+/* Oculta la barra de cabecera predeterminada de Streamlit */
 header {visibility: hidden;}
-/* Oculta el botón de "Deploy" si aparece en la esquina superior derecha */
-.stAppDeployButton {display:none;} 
-/* Oculta el icono de GitHub/Source Code o cualquier "viewer badge" */
-.css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob, 
-.styles_viewerBadge__1yB5_, .viewerBadge_link__1S137, 
-.viewerBadge_text__1JaDK {
+
+/* Oculta el botón de "Deploy" si aparece */
+.stAppDeployButton {display: none !important;} 
+
+/* Oculta todos los "viewer badges", incluyendo la corona, el icono de GitHub y el texto de "View app by..." */
+/* Estos selectores cubren varias versiones y ubicaciones posibles del badge */
+.viewerBadge_container__1QSob, 
+.styles_viewerBadge__1yB5_, 
+.viewerBadge_link__1S137, 
+.viewerBadge_text__1JaDK,
+/* Selectores más generales que a menudo Streamlit usa para sus insignias */
+[data-testid="stToolbar"] > div:last-child, /* Targets the last child in the toolbar, often where badges are */
+[data-testid="stDecoration"], /* Hides the entire decoration layer, might be too broad but effective */
+.css-1jc7ptx.e1ewe7hr3 { /* A common combination of classes for the badge */
     display: none !important;
+    visibility: hidden !important; /* Adding visibility hidden for stronger hiding */
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important; /* Ensure no residual space */
+    margin: 0 !important;
+    padding: 0 !important;
 }
+
+/* Opcional: Si aún ves un pequeño espacio o borde en la parte inferior, puedes ajustar esto */
+body {
+    padding-bottom: 0 !important;
+}
+
 </style>
 """
 st.markdown(hide_st_style, unsafe_allow_html=True)
@@ -154,11 +176,10 @@ def obtener_estructura_cuentas():
         },
 
         # Resto de la estructura
-        # CORRECCIÓN: La fórmula de EBITDA Operativa debe ser (Ventas Netas - Costo - TOTAL GASTOS OPERATIVOS)
         'EBITDA OPERATIVA': {'jerarquia': '10', 'tipo': 'formula', 'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
-        'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': 2362914, 'meta': 0, 'simulable': True}, # EGRESO
+        'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': 2362914, 'meta': 0, 'simulable': True},
         'EBITDA': {'jerarquia': '12', 'tipo': 'formula', 'formula': 'EBITDA OPERATIVA - TOTAL DE OTROS GASTOS'},
-        'FINANCIEROS': { # EGRESO FINANCIERO (suma de sus componentes)
+        'FINANCIEROS': {
             'jerarquia': '13', 'tipo': 'suma',
             'componentes': ['GASTOS FINANCIEROS', 'PRODUCTOS FINANCIEROS', 'RESULTADO CAMBIARIO'],
             'subcuentas': {
@@ -177,7 +198,7 @@ def get_cached_structure():
     return obtener_estructura_cuentas()
 
 
-# Función auxiliar para obtener el valor actual de una cuenta
+# Helper function to get the actual value of a specific simulable account
 def get_actual_value(estructura, account_key, sub_account_key=None, sub_item_key=None):
     if sub_account_key and sub_item_key:
         return estructura.get(account_key, {}).get('subcuentas', {}).get(sub_account_key, {}).get(sub_item_key, {}).get(
@@ -189,7 +210,7 @@ def get_actual_value(estructura, account_key, sub_account_key=None, sub_item_key
 
 
 def inicializar_simulaciones():
-    """Inicializa el estado de las simulaciones y controles en st.session_state."""
+    # Asegura que las claves de simulación existan al inicio en st.session_state
     estructura = get_cached_structure()
     for cuenta, datos in estructura.items():
         if datos.get('simulable'):
@@ -411,15 +432,15 @@ def aplicar_estilo_financiero(df):
 
         # Estilo para ingresos (morado claro)
         if row['Cuenta'] in cuentas_ingresos:
-            styles.append(f'background-color: {PALETA_GRAFICOS["Ingresos"]}15;') # Usamos un alpha para que sea sutil
+            styles.append(f'background-color: {PALETA_GRAFICOS["Ingresos"]}15;')
             styles.append('font-weight: bold;')
         # Estilo para egresos (rojo claro/coral)
         elif row['Cuenta'] in cuentas_egresos:
-            styles.append(f'background-color: {PALETA_GRAFICOS["Egresos"]}15;') # Usamos un alpha para que sea sutil
+            styles.append(f'background-color: {PALETA_GRAFICOS["Egresos"]}15;')
             styles.append('font-weight: bold;')
         # Estilo para resultados intermedios/finales (verde azulado claro)
         elif row['Cuenta'] in cuentas_resultados:
-            styles.append('background-color: rgba(0, 168, 150, 0.1);') # Ya tiene alpha, se mantiene
+            styles.append('background-color: rgba(0, 168, 150, 0.1);')
             styles.append('font-weight: bold;')
 
         # Estilo para celdas de brecha (mejorado para claridad)
