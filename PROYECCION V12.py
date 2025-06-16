@@ -6,8 +6,29 @@ import google.generativeai as genai
 
 # --- CONFIGURACIÓN INICIAL ---
 # Configuración inicial de la página para un layout amplio y sidebar expandido
-st.set_page_config(page_title="Simulador Financiero Jerárquico PORTAWARE", layout="wide",
-                   initial_sidebar_state="expanded")
+st.set_page_config(page_title="Simulador Financiero Jerárquico PORTAWARE", layout="wide", initial_sidebar_state="expanded")
+
+# --- OCULTAR ELEMENTOS POR DEFECTO DE STREAMLIT (para una interfaz más limpia y profesional) ---
+# Este bloque de CSS se inyecta en la aplicación para ocultar el menú principal,
+# el pie de página "Made with Streamlit" y cualquier botón de despliegue o icono de GitHub.
+hide_st_style = """
+<style>
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+/* Oculta el botón de "Deploy" si aparece en la esquina superior derecha */
+.stAppDeployButton {display:none;} 
+/* Oculta el icono de GitHub/Source Code o cualquier "viewer badge" */
+.css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob, 
+.styles_viewerBadge__1yB5_, .viewerBadge_link__1S137, 
+.viewerBadge_text__1JaDK {
+    display: none !important;
+}
+</style>
+"""
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
+# --- FIN DE OCULTAR ELEMENTOS POR DEFECTO DE STREAMLIT ---
 
 # Configuración de Gemini AI
 try:
@@ -21,16 +42,16 @@ except (FileNotFoundError, KeyError):
 
 # Paleta de colores profesional y extendida
 PALETA_GRAFICOS = {
-    'Actual': '#0077B6',  # Azul profesional
-    'Simulado': '#F79F1F',  # Naranja vibrante
-    'Meta': '#00A896',  # Verde azulado
-    'Positivo': '#2ECC71',  # Verde claro (para mejoras)
+    'Actual': '#0077B6',   # Azul profesional
+    'Simulado': '#F79F1F', # Naranja vibrante
+    'Meta': '#00A896',     # Verde azulado
+    'Positivo': '#2ECC71', # Verde claro (para mejoras)
     'Negativo': '#E74C3C',  # Rojo tomate (para deterioros)
 
     # NUEVOS COLORES PARA INGRESOS Y EGRESOS
-    'Ingresos': '#8A2BE2',  # Morado para ingresos (un poco más claro para estética)
+    'Ingresos': '#8A2BE2', # Morado para ingresos (un poco más claro para estética)
     'Egresos': '#FF6347',  # Rojo claro/coral para egresos (agradable a la vista)
-    'Neutro': '#CCCCCC'  # Gris para elementos neutros o que no se destaquen
+    'Neutro': '#CCCCCC'    # Gris para elementos neutros o que no se destaquen
 }
 
 
@@ -134,14 +155,10 @@ def obtener_estructura_cuentas():
 
         # Resto de la estructura
         # CORRECCIÓN: La fórmula de EBITDA Operativa debe ser (Ventas Netas - Costo - TOTAL GASTOS OPERATIVOS)
-        # En la estructura original era MARGEN BRUTO - TOTAL GASTOS OPERATIVOS, que es equivalente
-        # pero esta forma es más directa y menos propensa a errores si hay cambios en MARGEN BRUTO.
-        'EBITDA OPERATIVA': {'jerarquia': '10', 'tipo': 'formula',
-                             'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
-        'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': 2362914, 'meta': 0, 'simulable': True},
-        # EGRESO
+        'EBITDA OPERATIVA': {'jerarquia': '10', 'tipo': 'formula', 'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
+        'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': 2362914, 'meta': 0, 'simulable': True}, # EGRESO
         'EBITDA': {'jerarquia': '12', 'tipo': 'formula', 'formula': 'EBITDA OPERATIVA - TOTAL DE OTROS GASTOS'},
-        'FINANCIEROS': {  # EGRESO FINANCIERO (suma de sus componentes)
+        'FINANCIEROS': { # EGRESO FINANCIERO (suma de sus componentes)
             'jerarquia': '13', 'tipo': 'suma',
             'componentes': ['GASTOS FINANCIEROS', 'PRODUCTOS FINANCIEROS', 'RESULTADO CAMBIARIO'],
             'subcuentas': {
@@ -212,12 +229,11 @@ def calculate_account_value(_estructura, scenario, changes):
 
         datos = _estructura.get(cuenta)
         if not datos:
-            return 0  # Devolver 0 si la cuenta no existe o no tiene datos
+            return 0 # Devolver 0 si la cuenta no existe o no tiene datos
 
         valor = 0
         if datos['tipo'] == 'simple':
-            base_value = datos['actual'] if scenario == 'actual' else datos.get('meta', 0) if scenario == 'meta' else \
-            datos['actual']
+            base_value = datos['actual'] if scenario == 'actual' else datos.get('meta', 0) if scenario == 'meta' else datos['actual']
             if datos.get('simulable') and scenario == 'simulado':
                 key = f"sim_{cuenta.replace(' ', '_').replace('/', '_')}"
                 cambio_monetario = changes.get(key, 0.0)
@@ -228,20 +244,16 @@ def calculate_account_value(_estructura, scenario, changes):
             for subcuenta_name, subdatos_dict_or_item in datos['subcuentas'].items():
                 if isinstance(subdatos_dict_or_item, dict) and 'actual' not in subdatos_dict_or_item:
                     for subitem_name, itemdatos in subdatos_dict_or_item.items():
-                        base_value = itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta',
-                                                                                                    0) if scenario == 'meta' else \
-                        itemdatos['actual']
+                        base_value = itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta', 0) if scenario == 'meta' else itemdatos['actual']
                         if itemdatos.get('simulable') and scenario == 'simulado':
                             key = f"sim_{subcuenta_name.replace(' ', '_')}_{subitem_name.replace(' ', '_')}"
                             cambio_monetario = changes.get(key, 0.0)
                             valor += base_value + cambio_monetario
                         else:
                             valor += base_value
-                else:  # Es una subcuenta simple dentro de una suma (ej. SUELDOS Y SALARIOS)
+                else: # Es una subcuenta simple dentro de una suma (ej. SUELDOS Y SALARIOS)
                     itemdatos = subdatos_dict_or_item
-                    base_value = itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta',
-                                                                                                0) if scenario == 'meta' else \
-                    itemdatos['actual']
+                    base_value = itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta', 0) if scenario == 'meta' else itemdatos['actual']
                     if itemdatos.get('simulable') and scenario == 'simulado':
                         key = f"sim_{subcuenta_name.replace(' ', '_')}"
                         cambio_monetario = changes.get(key, 0.0)
@@ -250,16 +262,14 @@ def calculate_account_value(_estructura, scenario, changes):
                         valor += base_value
         elif datos['tipo'] == 'formula':
             # La lógica para resolver fórmulas necesita obtener los valores de sus componentes
-            # Asegurarse de que el cálculo de fórmulas se base en los valores ya calculados en 'results'
             temp_formula = datos['formula'].replace(' - ', '|').replace(' + ', '|')
             operands = temp_formula.split('|')
             operators = [char for char in datos['formula'] if char in ['+', '-']]
 
-            # Obtener el primer operando ya calculado o calcularlo si no está
             first_operand_name = operands[0].strip()
             first_operand_val = results.get(first_operand_name)
             if first_operand_val is None:
-                first_operand_val = get_val(first_operand_name)  # Llama recursivamente si no está en results
+                first_operand_val = get_val(first_operand_name)
 
             valor = first_operand_val
             for i, operand_name_raw in enumerate(operands[1:]):
@@ -267,13 +277,13 @@ def calculate_account_value(_estructura, scenario, changes):
                 current_operand_name = operand_name_raw.strip()
                 current_operand_val = results.get(current_operand_name)
                 if current_operand_val is None:
-                    current_operand_val = get_val(current_operand_name)  # Llama recursivamente si no está en results
+                    current_operand_val = get_val(current_operand_name)
 
                 if op == '+':
                     valor += current_operand_val
                 elif op == '-':
                     valor -= current_operand_val
-
+        
         # Guardar el resultado antes de devolverlo para evitar recálculos
         results[cuenta] = valor
         return valor
@@ -282,11 +292,8 @@ def calculate_account_value(_estructura, scenario, changes):
 
     # Realizar múltiples pasadas para asegurar que todas las fórmulas que dependen de otras
     # fórmulas o sumas se calculen correctamente.
-    # Un número pequeño de iteraciones (ej. 5) es generalmente suficiente para jerarquías financieras.
     for _ in range(5):
         for cuenta in cuentas_ordenadas:
-            # Forzar el recálculo de la cuenta en cada pasada si es una fórmula o si no ha sido calculada
-            # Esto ayuda a resolver dependencias en cascada
             if cuenta not in results or _estructura[cuenta]['tipo'] == 'formula':
                 get_val(cuenta)
 
@@ -294,18 +301,14 @@ def calculate_account_value(_estructura, scenario, changes):
     # para que el DataFrame final sea completo.
     for cuenta in cuentas_ordenadas:
         if cuenta not in results:
-            # Para cuentas simples o componentes de sumas que no fueron 'simulados' ni parte de fórmulas,
-            # simplemente tomamos su valor actual o meta directamente de la estructura.
             if _estructura[cuenta]['tipo'] == 'simple':
-                results[cuenta] = _estructura[cuenta]['actual'] if scenario == 'actual' else _estructura[cuenta].get(
-                    'meta', 0)
+                results[cuenta] = _estructura[cuenta]['actual'] if scenario == 'actual' else _estructura[cuenta].get('meta', 0)
             elif _estructura[cuenta]['tipo'] in ['suma', 'suma_gastos']:
-                # Recalcular sumas si aún faltan
                 sum_val = 0
                 for subcuenta_name, subdatos_dict_or_item in _estructura[cuenta]['subcuentas'].items():
                     if isinstance(subdatos_dict_or_item, dict) and 'actual' not in subdatos_dict_or_item:
                         for subitem_name, itemdatos in subdatos_dict_or_item.items():
-                            sum_val += itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta', 0)
+                             sum_val += itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta', 0)
                     else:
                         itemdatos = subdatos_dict_or_item
                         sum_val += itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta', 0)
@@ -338,10 +341,8 @@ def generar_dataframe_completo(changes):
     df['Brecha Simulado vs Actual (%)'] = ((df['Simulado'] - df['Actual']) / df['Actual'].replace(0, pd.NA)) * 100
 
     # Asegurarse de que Ventas Netas no sea 0 para evitar ZeroDivisionError en los porcentajes
-    ventas_netas_simulado = df.loc[df['Cuenta'] == 'VENTAS NETAS', 'Simulado'].iloc[0] if 'VENTAS NETAS' in df[
-        'Cuenta'].values else 1
-    ventas_netas_meta = df.loc[df['Cuenta'] == 'VENTAS NETAS', 'Meta'].iloc[0] if 'VENTAS NETAS' in df[
-        'Cuenta'].values else 1
+    ventas_netas_simulado = df.loc[df['Cuenta'] == 'VENTAS NETAS', 'Simulado'].iloc[0] if 'VENTAS NETAS' in df['Cuenta'].values else 1
+    ventas_netas_meta = df.loc[df['Cuenta'] == 'VENTAS NETAS', 'Meta'].iloc[0] if 'VENTAS NETAS' in df['Cuenta'].values else 1
 
     df['Simulado (% VN)'] = (df['Simulado'] / ventas_netas_simulado) * 100 if ventas_netas_simulado != 0 else 0
     df['Meta (% VN)'] = (df['Meta'] / ventas_netas_meta) * 100 if ventas_netas_meta != 0 else 0
@@ -358,9 +359,8 @@ def obtener_variables_modificadas(changes):
     sim_key_info = {}
     for cuenta, datos in estructura.items():
         if datos.get('simulable') and 'subcuentas' not in datos:
-            sim_key_info[f"sim_{cuenta.replace(' ', '_').replace('/', '_')}"] = {'name': cuenta,
-                                                                                 'actual_val': datos['actual']}
-
+            sim_key_info[f"sim_{cuenta.replace(' ', '_').replace('/', '_')}"] = {'name': cuenta, 'actual_val': datos['actual']}
+        
         if 'subcuentas' in datos:
             for subcuenta, subdatos in datos['subcuentas'].items():
                 if isinstance(subdatos, dict) and 'actual' not in subdatos:
@@ -369,8 +369,7 @@ def obtener_variables_modificadas(changes):
                             sim_key_info[f"sim_{subcuenta.replace(' ', '_')}_{subitem.replace(' ', '_')}"] = {
                                 'name': f"{subcuenta} - {subitem}", 'actual_val': itemdatos['actual']}
                 elif isinstance(subdatos, dict) and subdatos.get('simulable'):
-                    sim_key_info[f"sim_{subcuenta.replace(' ', '_')}"] = {'name': subcuenta,
-                                                                          'actual_val': subdatos['actual']}
+                    sim_key_info[f"sim_{subcuenta.replace(' ', '_')}"] = {'name': subcuenta, 'actual_val': subdatos['actual']}
 
     for key, value in changes.items():
         if key.startswith('sim_') and value != 0.0:
@@ -396,9 +395,7 @@ def obtener_variables_modificadas(changes):
     if not df_variables.empty:
         df_variables = df_variables.sort_values('ValorNumAbsoluto', ascending=False)
         df_variables['Cambio Monetario'] = df_variables['Cambio Monetario'].apply(lambda x: f"${x:,.0f}")
-        df_variables['Cambio Porcentual'] = df_variables['Cambio Porcentual'].apply(
-            lambda x: f"{x:+.1f}%" if x != float('inf') and x != float('-inf') else (
-                "+Inf%" if x == float('inf') else "-Inf%"))
+        df_variables['Cambio Porcentual'] = df_variables['Cambio Porcentual'].apply(lambda x: f"{x:+.1f}%" if x != float('inf') and x != float('-inf') else ("+Inf%" if x == float('inf') else "-Inf%"))
         df_variables = df_variables.drop(columns=['ValorNumAbsoluto'])
     return df_variables
 
@@ -414,15 +411,15 @@ def aplicar_estilo_financiero(df):
 
         # Estilo para ingresos (morado claro)
         if row['Cuenta'] in cuentas_ingresos:
-            styles.append(f'background-color: {PALETA_GRAFICOS["Ingresos"]}15;')  # Usamos un alpha para que sea sutil
+            styles.append(f'background-color: {PALETA_GRAFICOS["Ingresos"]}15;') # Usamos un alpha para que sea sutil
             styles.append('font-weight: bold;')
         # Estilo para egresos (rojo claro/coral)
         elif row['Cuenta'] in cuentas_egresos:
-            styles.append(f'background-color: {PALETA_GRAFICOS["Egresos"]}15;')  # Usamos un alpha para que sea sutil
+            styles.append(f'background-color: {PALETA_GRAFICOS["Egresos"]}15;') # Usamos un alpha para que sea sutil
             styles.append('font-weight: bold;')
         # Estilo para resultados intermedios/finales (verde azulado claro)
         elif row['Cuenta'] in cuentas_resultados:
-            styles.append('background-color: rgba(0, 168, 150, 0.1);')  # Ya tiene alpha, se mantiene
+            styles.append('background-color: rgba(0, 168, 150, 0.1);') # Ya tiene alpha, se mantiene
             styles.append('font-weight: bold;')
 
         # Estilo para celdas de brecha (mejorado para claridad)
@@ -458,12 +455,8 @@ def generar_recomendacion_variables_ia(df_completo):
 
     for cuenta_name, datos in estructura_original.items():
         if datos.get('simulable') and 'subcuentas' not in datos:
-            actual_val = df_completo[df_completo['Cuenta'] == cuenta_name]['Actual'].iloc[0] if cuenta_name in \
-                                                                                                df_completo[
-                                                                                                    'Cuenta'].values else \
-            datos['actual']
-            meta_val = df_completo[df_completo['Cuenta'] == cuenta_name]['Meta'].iloc[0] if cuenta_name in df_completo[
-                'Cuenta'].values else datos['meta']
+            actual_val = df_completo[df_completo['Cuenta'] == cuenta_name]['Actual'].iloc[0] if cuenta_name in df_completo['Cuenta'].values else datos['actual']
+            meta_val = df_completo[df_completo['Cuenta'] == cuenta_name]['Meta'].iloc[0] if cuenta_name in df_completo['Cuenta'].values else datos['meta']
             simulable_accounts_details.append({
                 'Variable': cuenta_name, 'Actual': actual_val, 'Meta': meta_val
             })
@@ -491,8 +484,7 @@ def generar_recomendacion_variables_ia(df_completo):
     df_simulable['Desviacion (Actual vs Meta)'] = df_simulable['Actual'] - df_simulable['Meta']
     df_simulable['Abs_Deviation'] = df_simulable['Desviacion (Actual vs Meta)'].abs()
 
-    df_top_deviations = df_simulable[df_simulable['Abs_Deviation'] > 1000].sort_values(by='Abs_Deviation',
-                                                                                       ascending=False).head(7)
+    df_top_deviations = df_simulable[df_simulable['Abs_Deviation'] > 1000].sort_values(by='Abs_Deviation', ascending=False).head(7)
 
     top_deviations_table_md = "No se identificaron desviaciones significativas entre el Actual y la Meta para recomendar acciones en este momento."
     if not df_top_deviations.empty:
@@ -552,59 +544,38 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
     razones_data = []
 
     # Obtener valores necesarios para los cálculos, manejando casos donde el denominador es cero
-    ventas_netas_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'VENTAS NETAS', actual_col].iloc[
-        0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 1
-    margen_bruto_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', actual_col].iloc[
-        0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
-    ebitda_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', actual_col].iloc[0] if 'EBITDA' in \
-                                                                                                      cuentas_para_ia[
-                                                                                                          'Cuenta'].values else 0
-    bai_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'BAI', actual_col].iloc[0] if 'BAI' in \
-                                                                                                cuentas_para_ia[
-                                                                                                    'Cuenta'].values else 0
+    ventas_netas_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'VENTAS NETAS', actual_col].iloc[0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 1
+    margen_bruto_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', actual_col].iloc[0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
+    ebitda_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', actual_col].iloc[0] if 'EBITDA' in cuentas_para_ia['Cuenta'].values else 0
+    bai_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'BAI', actual_col].iloc[0] if 'BAI' in cuentas_para_ia['Cuenta'].values else 0
 
-    ventas_netas_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'VENTAS NETAS', meta_col].iloc[
-        0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 1
-    margen_bruto_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', meta_col].iloc[
-        0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
-    ebitda_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', meta_col].iloc[0] if 'EBITDA' in \
-                                                                                                  cuentas_para_ia[
-                                                                                                      'Cuenta'].values else 0
-    bai_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'BAI', meta_col].iloc[0] if 'BAI' in cuentas_para_ia[
-        'Cuenta'].values else 0
+    ventas_netas_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'VENTAS NETAS', meta_col].iloc[0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 1
+    margen_bruto_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', meta_col].iloc[0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
+    ebitda_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', meta_col].iloc[0] if 'EBITDA' in cuentas_para_ia['Cuenta'].values else 0
+    bai_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'BAI', meta_col].iloc[0] if 'BAI' in cuentas_para_ia['Cuenta'].values else 0
 
-    ventas_netas_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'VENTAS NETAS', simulado_col].iloc[
-        0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 1
-    margen_bruto_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', simulado_col].iloc[
-        0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
-    ebitda_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', simulado_col].iloc[0] if 'EBITDA' in \
-                                                                                                          cuentas_para_ia[
-                                                                                                              'Cuenta'].values else 0
-    bai_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'BAI', simulado_col].iloc[0] if 'BAI' in \
-                                                                                                    cuentas_para_ia[
-                                                                                                        'Cuenta'].values else 0
+    ventas_netas_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'VENTAS NETAS', simulado_col].iloc[0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 1
+    margen_bruto_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', simulado_col].iloc[0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
+    ebitda_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', simulado_col].iloc[0] if 'EBITDA' in cuentas_para_ia['Cuenta'].values else 0
+    bai_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'BAI', simulado_col].iloc[0] if 'BAI' in cuentas_para_ia['Cuenta'].values else 0
 
     # Margen Bruto sobre Ventas Netas
     margen_bruto_vn_actual = (margen_bruto_actual / ventas_netas_actual * 100) if ventas_netas_actual != 0 else 0
     margen_bruto_vn_meta = (margen_bruto_meta / ventas_netas_meta * 100) if ventas_netas_meta != 0 else 0
-    margen_bruto_vn_simulado = (
-                margen_bruto_simulado / ventas_netas_simulado * 100) if ventas_netas_simulado != 0 else 0
-    razones_data.append({'Razon Financiera': 'Margen Bruto sobre Ventas Netas (%)', 'Actual': margen_bruto_vn_actual,
-                         'Meta': margen_bruto_vn_meta, 'Simulado': margen_bruto_vn_simulado})
+    margen_bruto_vn_simulado = (margen_bruto_simulado / ventas_netas_simulado * 100) if ventas_netas_simulado != 0 else 0
+    razones_data.append({'Razon Financiera': 'Margen Bruto sobre Ventas Netas (%)', 'Actual': margen_bruto_vn_actual, 'Meta': margen_bruto_vn_meta, 'Simulado': margen_bruto_vn_simulado})
 
     # Margen EBITDA sobre Ventas Netas
     margen_ebitda_vn_actual = (ebitda_actual / ventas_netas_actual * 100) if ventas_netas_actual != 0 else 0
     margen_ebitda_vn_meta = (ebitda_meta / ventas_netas_meta * 100) if ventas_netas_meta != 0 else 0
     margen_ebitda_vn_simulado = (ebitda_simulado / ventas_netas_simulado * 100) if ventas_netas_simulado != 0 else 0
-    razones_data.append({'Razon Financiera': 'Margen EBITDA sobre Ventas Netas (%)', 'Actual': margen_ebitda_vn_actual,
-                         'Meta': margen_ebitda_vn_meta, 'Simulado': margen_ebitda_vn_simulado})
+    razones_data.append({'Razon Financiera': 'Margen EBITDA sobre Ventas Netas (%)', 'Actual': margen_ebitda_vn_actual, 'Meta': margen_ebitda_vn_meta, 'Simulado': margen_ebitda_vn_simulado})
 
     # Margen BAI sobre Ventas Netas
     margen_bai_vn_actual = (bai_actual / ventas_netas_actual * 100) if ventas_netas_actual != 0 else 0
     margen_bai_vn_meta = (bai_meta / ventas_netas_meta * 100) if ventas_netas_meta != 0 else 0
     margen_bai_vn_simulado = (bai_simulado / ventas_netas_simulado * 100) if ventas_netas_simulado != 0 else 0
-    razones_data.append({'Razon Financiera': 'Margen BAI sobre Ventas Netas (%)', 'Actual': margen_bai_vn_actual,
-                         'Meta': margen_bai_vn_meta, 'Simulado': margen_bai_vn_simulado})
+    razones_data.append({'Razon Financiera': 'Margen BAI sobre Ventas Netas (%)', 'Actual': margen_bai_vn_actual, 'Meta': margen_bai_vn_meta, 'Simulado': margen_bai_vn_simulado})
 
     df_razones = pd.DataFrame(razones_data)
     df_razones['Brecha Actual vs Meta (%)'] = df_razones['Actual'] - df_razones['Meta']
@@ -627,6 +598,7 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
 
     # Convertir a Markdown la tabla de cuentas para el prompt
     analysis_table_md = cols_for_prompt_df.to_markdown(index=False, numalign="left", stralign="left")
+
 
     # Contexto mejorado de la empresa PORTAWARE
     company_context = """
@@ -696,7 +668,7 @@ with st.sidebar:
     st.session_state['ajuste_activo'] = st.checkbox(
         "Activar ajuste automático de costos",
         value=st.session_state.get('ajuste_activo', False),
-        key='ajuste_activo_checkbox_widget',  # Clave única para el widget
+        key='ajuste_activo_checkbox_widget', # Clave única para el widget
         help="Vincula el costo de materiales con el incremento en ventas brutas nacionales"
     )
 
@@ -705,10 +677,10 @@ with st.sidebar:
         st.session_state['porcentaje_ajuste'] = st.slider(
             "Porcentaje de ajuste sobre aumento de ventas brutas nacionales (%)",
             0, 100, st.session_state.get('porcentaje_ajuste', 45),
-            key='porcentaje_ajuste_slider_widget',  # Clave única para el widget
+            key='porcentaje_ajuste_slider_widget', # Clave única para el widget
             help="El costo de Materiales A Proceso se ajustará en este porcentaje del cambio en Ventas Brutas Nacionales (Retail, Catálogo y Mayoreo)"
         )
-
+    
     st.markdown("---")
     st.subheader("🎭 Escenarios Rápidos")
     col1_scenario, col2_scenario = st.columns(2)
@@ -719,9 +691,9 @@ with st.sidebar:
             for key in list(st.session_state.keys()):
                 if key.startswith('sim_'):
                     st.session_state[key] = 0.0
-            st.session_state['ajuste_activo'] = False  # Resetear también el ajuste automático
-            st.session_state['porcentaje_ajuste'] = 45  # Resetear su valor por defecto
-            st.session_state['mobile_view_checkbox'] = False  # Resetear la vista móvil
+            st.session_state['ajuste_activo'] = False # Resetear también el ajuste automático
+            st.session_state['porcentaje_ajuste'] = 45 # Resetear su valor por defecto
+            st.session_state['mobile_view_checkbox'] = False # Resetear la vista móvil
             st.rerun()
 
     with col2_scenario:
@@ -753,7 +725,7 @@ with st.sidebar:
         percentage_change = 0.0
         if actual_val != 0:
             percentage_change = (current_change / actual_val) * 100
-        elif current_change != 0:  # Si actual_val es 0 pero hay un cambio, el porcentaje es "infinito"
+        elif current_change != 0: # Si actual_val es 0 pero hay un cambio, el porcentaje es "infinito"
             percentage_change = float('inf') if current_change > 0 else float('-inf')
 
         st.caption(
@@ -815,18 +787,17 @@ with st.sidebar:
                     if st.session_state.get('ajuste_activo', False):
                         cambio_ventas_brutas_nacional = 0
                         for canal_vn in ['RETAIL', 'CATALOGO', 'MAYOREO']:
-                            cambio_ventas_brutas_nacional += st.session_state.get(
-                                f"sim_VENTAS_BRUTAS_NACIONAL_16%_{canal_vn}", 0.0)
-
+                            cambio_ventas_brutas_nacional += st.session_state.get(f"sim_VENTAS_BRUTAS_NACIONAL_16%_{canal_vn}", 0.0)
+                        
                         porcentaje_ajuste_val = st.session_state.get('porcentaje_ajuste', 45)
                         ajuste_automatico_para_display = (porcentaje_ajuste_val / 100) * cambio_ventas_brutas_nacional
 
-                        st.number_input(f"{item.replace('_', ' ').title()}",
-                                        min_value=min_val,
-                                        max_value=max_val,
+                        st.number_input(f"{item.replace('_', ' ').title()}", 
+                                        min_value=min_val, 
+                                        max_value=max_val, 
                                         value=ajuste_automatico_para_display,
-                                        step=1000.0,
-                                        key=key,
+                                        step=1000.0, 
+                                        key=key, 
                                         disabled=True,
                                         help="Este valor se ajusta automáticamente según el 'Ajuste Automático de Costos'."
                                         )
@@ -841,6 +812,7 @@ with st.sidebar:
                     st.number_input(f"{item.replace('_', ' ').title()}", min_value=min_val, max_value=max_val,
                                     value=st.session_state.get(key, 0.0), step=1000.0, key=key)
                     display_number_input_info_with_actual(key, actual_val)
+
 
         with st.expander("🔧 Costos Indirectos"):
             for item, datos in estructura['COSTO']['subcuentas']['COSTO INDIRECTO'].items():
@@ -948,7 +920,6 @@ if st.session_state.get('ajuste_activo', False):
     # Sumar los cambios de los inputs de ventas nacionales (Retail, Catalogo, Mayoreo)
     for canal in ['RETAIL', 'CATALOGO', 'MAYOREO']:
         key_ventas_nacional = f"sim_VENTAS_BRUTAS_NACIONAL_16%_{canal}"
-        # Asegurarse de que el valor exista en session_state, si no, es 0
         cambio_ventas_brutas_nacional += st.session_state.get(key_ventas_nacional, 0.0)
 
     porcentaje_ajuste = st.session_state.get('porcentaje_ajuste', 45)
@@ -973,7 +944,7 @@ with tab1:
 
     # Métricas principales (VENTAS NETAS, MARGEN BRUTO, EBITDA, BAI)
     col1, col2, col3, col4 = st.columns(4)
-
+    
     ventas_netas = df_completo.loc[df_completo['Cuenta'] == 'VENTAS NETAS', 'Simulado'].iloc[0]
     margen_bruto = df_completo.loc[df_completo['Cuenta'] == 'MARGEN BRUTO', 'Simulado'].iloc[0]
     ebitda = df_completo.loc[df_completo['Cuenta'] == 'EBITDA', 'Simulado'].iloc[0]
@@ -1050,7 +1021,7 @@ with tab1:
     columna_brecha = 'Brecha (% S vs M)'
 
     columnas_final_a_mostrar = []
-
+    
     # Lógica para la vista simplificada en móvil
     if st.session_state.get('mobile_view_checkbox', False):
         columnas_final_a_mostrar.append('Cuenta')
@@ -1101,7 +1072,7 @@ with tab2:
             totals={'marker': {'color': PALETA_GRAFICOS['Actual']}},
             increasing={'marker': {'color': PALETA_GRAFICOS['Positivo']}},
             decreasing={'marker': {'color': PALETA_GRAFICOS['Negativo']}}))
-
+        
         fig_waterfall.update_layout(
             margin=dict(l=20, r=20, t=30, b=20),
             height=400,
