@@ -5,7 +5,9 @@ import streamlit as st
 import google.generativeai as genai
 
 # --- CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Simulador Financiero Jerárquico", layout="wide", initial_sidebar_state="expanded")
+# Configuración inicial de la página para un layout amplio y sidebar expandido
+st.set_page_config(page_title="Simulador Financiero Jerárquico PORTAWARE", layout="wide",
+                   initial_sidebar_state="expanded")
 
 # Configuración de Gemini AI
 try:
@@ -14,23 +16,29 @@ try:
 except (FileNotFoundError, KeyError):
     GEMINI_AVAILABLE = False
     st.warning(
-        "⚠️ **Advertencia**: La clave de API de Gemini no está configurada en `st.secrets`. Las funcionalidades de IA no estarán disponibles.")
+        "⚠️ **Advertencia**: La clave de API de Gemini no está configurada en `st.secrets`. Las funcionalidades de IA no estarán disponibles."
+    )
 
-# Paleta de colores profesional
+# Paleta de colores profesional y extendida
 PALETA_GRAFICOS = {
-    'Actual': '#0077B6',
-    'Simulado': '#F79F1F',
-    'Meta': '#00A896',
-    'Positivo': '#2ECC71',  # Verde
-    'Negativo': '#E74C3C'  # Rojo
+    'Actual': '#0077B6',  # Azul profesional
+    'Simulado': '#F79F1F',  # Naranja vibrante
+    'Meta': '#00A896',  # Verde azulado
+    'Positivo': '#2ECC71',  # Verde claro (para mejoras)
+    'Negativo': '#E74C3C',  # Rojo tomate (para deterioros)
+
+    # NUEVOS COLORES PARA INGRESOS Y EGRESOS
+    'Ingresos': '#8A2BE2',  # Morado para ingresos (un poco más claro para estética)
+    'Egresos': '#FF6347',  # Rojo claro/coral para egresos (agradable a la vista)
+    'Neutro': '#CCCCCC'  # Gris para elementos neutros o que no se destaquen
 }
 
 
 # --- DATOS ESTRUCTURADOS ---
 def obtener_estructura_cuentas():
-    """Retorna la estructura completa de cuentas con jerarquía"""
+    """Retorna la estructura completa de cuentas con jerarquía para PORTAWARE."""
     return {
-        # Nivel 4 - VENTAS BRUTAS
+        # Nivel 4 - VENTAS BRUTAS (INGRESO)
         'VENTAS BRUTAS': {
             'jerarquia': '4', 'tipo': 'suma',
             'componentes': ['VENTAS BRUTAS NACIONAL 16%', 'VENTAS BRUTAS EXTRANJERO'],
@@ -48,14 +56,14 @@ def obtener_estructura_cuentas():
             }
         },
 
-        # Nivel 5 - DESCUENTOS Y OTROS
+        # Nivel 5 - DESCUENTOS Y OTROS (DESCUENTOS son una reducción de ingresos, OTROS INGRESOS es un ingreso)
         'DESCUENTOS': {'jerarquia': '5', 'tipo': 'simple', 'actual': 14370489, 'meta': 14608084, 'simulable': True},
         'OTROS INGRESOS': {'jerarquia': '5.3', 'tipo': 'simple', 'actual': -7071, 'meta': 0, 'simulable': True},
 
-        # Nivel 6 - VENTAS NETAS
+        # Nivel 6 - VENTAS NETAS (INGRESO CLAVE)
         'VENTAS NETAS': {'jerarquia': '6', 'tipo': 'formula', 'formula': 'VENTAS BRUTAS - DESCUENTOS + OTROS INGRESOS'},
 
-        # Nivel 7 - COSTOS
+        # Nivel 7 - COSTOS (EGRESO)
         'COSTO': {
             'jerarquia': '7', 'tipo': 'suma',
             'componentes': ['COSTO DIRECTO', 'COSTO INDIRECTO', 'OTROS COSTOS'],
@@ -75,7 +83,7 @@ def obtener_estructura_cuentas():
         # Nivel 8 - MARGEN BRUTO
         'MARGEN BRUTO': {'jerarquia': '8', 'tipo': 'formula', 'formula': 'VENTAS NETAS - COSTO'},
 
-        # Nivel 9 - GASTOS OPERATIVOS
+        # Nivel 9 - GASTOS OPERATIVOS (EGRESO)
         'TOTAL GASTOS OPERATIVOS': {
             'jerarquia': '9', 'tipo': 'suma_gastos',
             'subcuentas': {
@@ -125,10 +133,15 @@ def obtener_estructura_cuentas():
         },
 
         # Resto de la estructura
-        'EBITDA OPERATIVA': {'jerarquia': '10', 'tipo': 'formula', 'formula': 'MARGEN BRUTO - TOTAL GASTOS OPERATIVOS'},
+        # CORRECCIÓN: La fórmula de EBITDA Operativa debe ser (Ventas Netas - Costo - TOTAL GASTOS OPERATIVOS)
+        # En la estructura original era MARGEN BRUTO - TOTAL GASTOS OPERATIVOS, que es equivalente
+        # pero esta forma es más directa y menos propensa a errores si hay cambios en MARGEN BRUTO.
+        'EBITDA OPERATIVA': {'jerarquia': '10', 'tipo': 'formula',
+                             'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
         'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': 2362914, 'meta': 0, 'simulable': True},
+        # EGRESO
         'EBITDA': {'jerarquia': '12', 'tipo': 'formula', 'formula': 'EBITDA OPERATIVA - TOTAL DE OTROS GASTOS'},
-        'FINANCIEROS': {
+        'FINANCIEROS': {  # EGRESO FINANCIERO (suma de sus componentes)
             'jerarquia': '13', 'tipo': 'suma',
             'componentes': ['GASTOS FINANCIEROS', 'PRODUCTOS FINANCIEROS', 'RESULTADO CAMBIARIO'],
             'subcuentas': {
@@ -147,7 +160,7 @@ def get_cached_structure():
     return obtener_estructura_cuentas()
 
 
-# Helper function to get the actual value of a specific simulable account
+# Función auxiliar para obtener el valor actual de una cuenta
 def get_actual_value(estructura, account_key, sub_account_key=None, sub_item_key=None):
     if sub_account_key and sub_item_key:
         return estructura.get(account_key, {}).get('subcuentas', {}).get(sub_account_key, {}).get(sub_item_key, {}).get(
@@ -159,7 +172,7 @@ def get_actual_value(estructura, account_key, sub_account_key=None, sub_item_key
 
 
 def inicializar_simulaciones():
-    # Asegura que las claves de simulación existan al inicio en st.session_state
+    """Inicializa el estado de las simulaciones y controles en st.session_state."""
     estructura = get_cached_structure()
     for cuenta, datos in estructura.items():
         if datos.get('simulable'):
@@ -183,23 +196,28 @@ def inicializar_simulaciones():
         st.session_state['ajuste_activo'] = False
     if 'porcentaje_ajuste' not in st.session_state:
         st.session_state['porcentaje_ajuste'] = 45
+    # Inicializa el estado para la vista móvil simplificada de la tabla
+    if 'mobile_view_checkbox' not in st.session_state:
+        st.session_state['mobile_view_checkbox'] = False
 
 
 def calculate_account_value(_estructura, scenario, changes):
+    """Calcula los valores de las cuentas para un escenario dado (actual, meta, simulado)."""
     results = {}
 
     def get_val(cuenta):
+        # Si ya calculamos esta cuenta en esta corrida, devolver el valor
         if cuenta in results:
             return results[cuenta]
 
         datos = _estructura.get(cuenta)
         if not datos:
-            return 0
+            return 0  # Devolver 0 si la cuenta no existe o no tiene datos
 
         valor = 0
         if datos['tipo'] == 'simple':
             base_value = datos['actual'] if scenario == 'actual' else datos.get('meta', 0) if scenario == 'meta' else \
-            datos['actual']  # Default to actual for 'simulado' base
+            datos['actual']
             if datos.get('simulable') and scenario == 'simulado':
                 key = f"sim_{cuenta.replace(' ', '_').replace('/', '_')}"
                 cambio_monetario = changes.get(key, 0.0)
@@ -219,7 +237,7 @@ def calculate_account_value(_estructura, scenario, changes):
                             valor += base_value + cambio_monetario
                         else:
                             valor += base_value
-                else:
+                else:  # Es una subcuenta simple dentro de una suma (ej. SUELDOS Y SALARIOS)
                     itemdatos = subdatos_dict_or_item
                     base_value = itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta',
                                                                                                 0) if scenario == 'meta' else \
@@ -231,38 +249,72 @@ def calculate_account_value(_estructura, scenario, changes):
                     else:
                         valor += base_value
         elif datos['tipo'] == 'formula':
+            # La lógica para resolver fórmulas necesita obtener los valores de sus componentes
+            # Asegurarse de que el cálculo de fórmulas se base en los valores ya calculados en 'results'
             temp_formula = datos['formula'].replace(' - ', '|').replace(' + ', '|')
             operands = temp_formula.split('|')
             operators = [char for char in datos['formula'] if char in ['+', '-']]
 
-            first_operand_val = get_val(operands[0])
+            # Obtener el primer operando ya calculado o calcularlo si no está
+            first_operand_name = operands[0].strip()
+            first_operand_val = results.get(first_operand_name)
+            if first_operand_val is None:
+                first_operand_val = get_val(first_operand_name)  # Llama recursivamente si no está en results
+
             valor = first_operand_val
-            for i, operand_name in enumerate(operands[1:]):
+            for i, operand_name_raw in enumerate(operands[1:]):
                 op = operators[i]
-                current_operand_val = get_val(operand_name)
+                current_operand_name = operand_name_raw.strip()
+                current_operand_val = results.get(current_operand_name)
+                if current_operand_val is None:
+                    current_operand_val = get_val(current_operand_name)  # Llama recursivamente si no está en results
+
                 if op == '+':
                     valor += current_operand_val
                 elif op == '-':
                     valor -= current_operand_val
+
+        # Guardar el resultado antes de devolverlo para evitar recálculos
         results[cuenta] = valor
         return valor
 
     cuentas_ordenadas = sorted(_estructura.keys(), key=lambda k: float(_estructura[k]['jerarquia']))
 
-    # Primera pasada: Calcular todos los "simples" y componentes de "sumas"
-    for cuenta in cuentas_ordenadas:
-        if _estructura[cuenta]['tipo'] in ['simple', 'suma', 'suma_gastos']:
-            get_val(cuenta)
+    # Realizar múltiples pasadas para asegurar que todas las fórmulas que dependen de otras
+    # fórmulas o sumas se calculen correctamente.
+    # Un número pequeño de iteraciones (ej. 5) es generalmente suficiente para jerarquías financieras.
+    for _ in range(5):
+        for cuenta in cuentas_ordenadas:
+            # Forzar el recálculo de la cuenta en cada pasada si es una fórmula o si no ha sido calculada
+            # Esto ayuda a resolver dependencias en cascada
+            if cuenta not in results or _estructura[cuenta]['tipo'] == 'formula':
+                get_val(cuenta)
 
-    # Segunda pasada: Calcular todas las "fórmulas" que dependen de los anteriores
+    # Asegurarse de que TODAS las cuentas estén en results al final, incluso las que no son simulables o fórmulas,
+    # para que el DataFrame final sea completo.
     for cuenta in cuentas_ordenadas:
-        if _estructura[cuenta]['tipo'] == 'formula':
-            get_val(cuenta)
-
+        if cuenta not in results:
+            # Para cuentas simples o componentes de sumas que no fueron 'simulados' ni parte de fórmulas,
+            # simplemente tomamos su valor actual o meta directamente de la estructura.
+            if _estructura[cuenta]['tipo'] == 'simple':
+                results[cuenta] = _estructura[cuenta]['actual'] if scenario == 'actual' else _estructura[cuenta].get(
+                    'meta', 0)
+            elif _estructura[cuenta]['tipo'] in ['suma', 'suma_gastos']:
+                # Recalcular sumas si aún faltan
+                sum_val = 0
+                for subcuenta_name, subdatos_dict_or_item in _estructura[cuenta]['subcuentas'].items():
+                    if isinstance(subdatos_dict_or_item, dict) and 'actual' not in subdatos_dict_or_item:
+                        for subitem_name, itemdatos in subdatos_dict_or_item.items():
+                            sum_val += itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta', 0)
+                    else:
+                        itemdatos = subdatos_dict_or_item
+                        sum_val += itemdatos['actual'] if scenario == 'actual' else itemdatos.get('meta', 0)
+                results[cuenta] = sum_val
     return results
 
 
 def generar_dataframe_completo(changes):
+    """Genera el DataFrame completo con valores Actual, Simulado, Meta y brechas/porcentajes."""
     estructura = get_cached_structure()
     actual_values = calculate_account_value(estructura, 'actual', changes)
     meta_values = calculate_account_value(estructura, 'meta', changes)
@@ -282,12 +334,10 @@ def generar_dataframe_completo(changes):
     df['Jerarquia'] = pd.to_numeric(df['Jerarquia'])
     df = df.sort_values(by='Jerarquia').reset_index(drop=True)
 
-    # Solo la brecha del escenario Simulado contra la Meta (%)
     df['Brecha vs Meta (%)'] = ((df['Simulado'] - df['Meta']) / df['Meta'].replace(0, pd.NA)) * 100
-    # Brecha de Simulado vs Actual (%)
     df['Brecha Simulado vs Actual (%)'] = ((df['Simulado'] - df['Actual']) / df['Actual'].replace(0, pd.NA)) * 100
 
-    # Porcentajes respecto a ventas netas
+    # Asegurarse de que Ventas Netas no sea 0 para evitar ZeroDivisionError en los porcentajes
     ventas_netas_simulado = df.loc[df['Cuenta'] == 'VENTAS NETAS', 'Simulado'].iloc[0] if 'VENTAS NETAS' in df[
         'Cuenta'].values else 1
     ventas_netas_meta = df.loc[df['Cuenta'] == 'VENTAS NETAS', 'Meta'].iloc[0] if 'VENTAS NETAS' in df[
@@ -300,20 +350,17 @@ def generar_dataframe_completo(changes):
 
 
 def obtener_variables_modificadas(changes):
-    """Retorna un DataFrame con las variables que han sido modificadas, mostrando el cambio monetario y el porcentaje"""
+    """Retorna un DataFrame con las variables que han sido modificadas, mostrando el cambio monetario y el porcentaje."""
     variables_modificadas = []
 
     estructura = get_cached_structure()
 
-    # Mapeo de claves de simulación a nombres de cuentas legibles y sus valores actuales base
     sim_key_info = {}
     for cuenta, datos in estructura.items():
-        # Manejo de cuentas simples simulables (ej. DESCUENTOS)
         if datos.get('simulable') and 'subcuentas' not in datos:
             sim_key_info[f"sim_{cuenta.replace(' ', '_').replace('/', '_')}"] = {'name': cuenta,
                                                                                  'actual_val': datos['actual']}
 
-        # Manejo de subcuentas con sub-ítems simulables (ej. VENTAS BRUTAS NACIONAL 16% - RETAIL)
         if 'subcuentas' in datos:
             for subcuenta, subdatos in datos['subcuentas'].items():
                 if isinstance(subdatos, dict) and 'actual' not in subdatos:
@@ -321,21 +368,17 @@ def obtener_variables_modificadas(changes):
                         if itemdatos.get('simulable'):
                             sim_key_info[f"sim_{subcuenta.replace(' ', '_')}_{subitem.replace(' ', '_')}"] = {
                                 'name': f"{subcuenta} - {subitem}", 'actual_val': itemdatos['actual']}
-                # Manejo de subcuentas directamente simulables (ej. SUELDOS Y SALARIOS)
                 elif isinstance(subdatos, dict) and subdatos.get('simulable'):
                     sim_key_info[f"sim_{subcuenta.replace(' ', '_')}"] = {'name': subcuenta,
                                                                           'actual_val': subdatos['actual']}
 
     for key, value in changes.items():
-        # IMPORTANTE: No considerar el cambio de Materiales A Proceso si es resultado del ajuste automático
-        # y si el ajuste automático no está activo. Esto se manejará antes de llamar a esta función.
         if key.startswith('sim_') and value != 0.0:
             info = sim_key_info.get(key)
             if info:
                 display_name = info['name']
                 actual_val = info['actual_val']
 
-                # Calcular porcentaje de cambio
                 porcentaje_cambio = 0.0
                 if actual_val != 0:
                     porcentaje_cambio = (value / actual_val) * 100
@@ -344,14 +387,13 @@ def obtener_variables_modificadas(changes):
 
                 variables_modificadas.append({
                     'Variable': display_name,
-                    'Cambio Monetario': value,  # Usar valor numérico para ordenar
-                    'Cambio Porcentual': porcentaje_cambio,  # Usar valor numérico para ordenar
+                    'Cambio Monetario': value,
+                    'Cambio Porcentual': porcentaje_cambio,
                     'ValorNumAbsoluto': abs(value)
                 })
 
     df_variables = pd.DataFrame(variables_modificadas)
     if not df_variables.empty:
-        # Formatear después de ordenar
         df_variables = df_variables.sort_values('ValorNumAbsoluto', ascending=False)
         df_variables['Cambio Monetario'] = df_variables['Cambio Monetario'].apply(lambda x: f"${x:,.0f}")
         df_variables['Cambio Porcentual'] = df_variables['Cambio Porcentual'].apply(
@@ -361,38 +403,43 @@ def obtener_variables_modificadas(changes):
     return df_variables
 
 
-# --- FUNCIONES DE UI Y ANÁLISIS ---
+# Función para aplicar estilos financieros a la tabla de DataFrame
 def aplicar_estilo_financiero(df):
     def estilo_fila(row):
         styles = []
-        # Estilos para cuentas principales y subtotales
-        cuentas_clave = [
-            'VENTAS BRUTAS', 'DESCUENTOS', 'OTROS INGRESOS', 'VENTAS NETAS', 'COSTO',
-            'MARGEN BRUTO', 'TOTAL GASTOS OPERATIVOS', 'EBITDA OPERATIVA',
-            'TOTAL DE OTROS GASTOS', 'EBITDA', 'FINANCIEROS', 'BAI'
-        ]
-        if row['Cuenta'] in cuentas_clave:
+        # Cuentas clave para resaltar
+        cuentas_ingresos = ['VENTAS BRUTAS', 'VENTAS NETAS', 'OTROS INGRESOS']
+        cuentas_egresos = ['DESCUENTOS', 'COSTO', 'TOTAL GASTOS OPERATIVOS', 'TOTAL DE OTROS GASTOS', 'FINANCIEROS']
+        cuentas_resultados = ['MARGEN BRUTO', 'EBITDA OPERATIVA', 'EBITDA', 'BAI']
+
+        # Estilo para ingresos (morado claro)
+        if row['Cuenta'] in cuentas_ingresos:
+            styles.append(f'background-color: {PALETA_GRAFICOS["Ingresos"]}15;')  # Usamos un alpha para que sea sutil
             styles.append('font-weight: bold;')
-            if row['Cuenta'] in ['VENTAS NETAS', 'MARGEN BRUTO', 'EBITDA', 'BAI']:
-                styles.append('background-color: rgba(0, 168, 150, 0.1);')  # Color para subtotales importantes
+        # Estilo para egresos (rojo claro/coral)
+        elif row['Cuenta'] in cuentas_egresos:
+            styles.append(f'background-color: {PALETA_GRAFICOS["Egresos"]}15;')  # Usamos un alpha para que sea sutil
+            styles.append('font-weight: bold;')
+        # Estilo para resultados intermedios/finales (verde azulado claro)
+        elif row['Cuenta'] in cuentas_resultados:
+            styles.append('background-color: rgba(0, 168, 150, 0.1);')  # Ya tiene alpha, se mantiene
+            styles.append('font-weight: bold;')
 
         # Estilo para celdas de brecha (mejorado para claridad)
         if 'Brecha (% S vs M)' in row.index:
             brecha_val = row['Brecha (% S vs M)']
             if pd.notna(brecha_val):
                 # Para ingresos y ganancias, verde si es positivo, rojo si es negativo
-                if row['Cuenta'] in ['VENTAS BRUTAS', 'VENTAS NETAS', 'MARGEN BRUTO', 'EBITDA OPERATIVA', 'EBITDA',
-                                     'BAI']:
-                    if brecha_val > 0.01:  # Pequeño umbral para considerar "positivo"
+                if row['Cuenta'] in (cuentas_ingresos + cuentas_resultados):
+                    if brecha_val > 0.01:
                         styles.append('color: green; font-weight: bold;')
-                    elif brecha_val < -0.01:  # Pequeño umbral para considerar "negativo"
+                    elif brecha_val < -0.01:
                         styles.append('color: red; font-weight: bold;')
                 # Para costos y gastos, verde si es negativo (mejor), rojo si es positivo (peor)
-                elif row['Cuenta'] in ['DESCUENTOS', 'COSTO', 'TOTAL GASTOS OPERATIVOS', 'TOTAL DE OTROS GASTOS',
-                                       'FINANCIEROS']:
-                    if brecha_val < -0.01:  # Reducción de costo/gasto es buena
+                elif row['Cuenta'] in cuentas_egresos:
+                    if brecha_val < -0.01:
                         styles.append('color: green; font-weight: bold;')
-                    elif brecha_val > 0.01:  # Aumento de costo/gasto es mala
+                    elif brecha_val > 0.01:
                         styles.append('color: red; font-weight: bold;')
 
         style_string = '; '.join(styles)
@@ -402,66 +449,51 @@ def aplicar_estilo_financiero(df):
 
 
 def generar_recomendacion_variables_ia(df_completo):
+    """Genera recomendaciones de variables clave para simular usando IA."""
     if not GEMINI_AVAILABLE:
         return "⚠️ **Error**: La API de Gemini no está configurada."
 
     estructura_original = get_cached_structure()
     simulable_accounts_details = []
 
-    # Recopilar todas las cuentas simulables con sus valores Actual y Meta
     for cuenta_name, datos in estructura_original.items():
-        # Primero, las cuentas de nivel superior que son simulables
-        if datos.get(
-                'simulable') and 'subcuentas' not in datos:
+        if datos.get('simulable') and 'subcuentas' not in datos:
             actual_val = df_completo[df_completo['Cuenta'] == cuenta_name]['Actual'].iloc[0] if cuenta_name in \
                                                                                                 df_completo[
                                                                                                     'Cuenta'].values else \
-                datos['actual']
+            datos['actual']
             meta_val = df_completo[df_completo['Cuenta'] == cuenta_name]['Meta'].iloc[0] if cuenta_name in df_completo[
                 'Cuenta'].values else datos['meta']
-
             simulable_accounts_details.append({
-                'Variable': cuenta_name,
-                'Actual': actual_val,
-                'Meta': meta_val
+                'Variable': cuenta_name, 'Actual': actual_val, 'Meta': meta_val
             })
 
-        # Luego, iterar sobre subcuentas para obtener los elementos simulables más granulares
         if 'subcuentas' in datos:
             for subcuenta_name, subdatos_dict_or_item in datos['subcuentas'].items():
                 if isinstance(subdatos_dict_or_item, dict) and 'actual' not in subdatos_dict_or_item:
-                    # Es un nivel intermedio (ej. VENTAS BRUTAS NACIONAL 16%, COSTO DIRECTO)
                     for subitem_name, itemdatos in subdatos_dict_or_item.items():
                         if itemdatos.get('simulable'):
                             full_name = f"{subcuenta_name} - {subitem_name}"
                             actual_val = itemdatos['actual']
                             meta_val = itemdatos['meta']
                             simulable_accounts_details.append({
-                                'Variable': full_name,
-                                'Actual': actual_val,
-                                'Meta': meta_val
+                                'Variable': full_name, 'Actual': actual_val, 'Meta': meta_val
                             })
                 elif isinstance(subdatos_dict_or_item, dict) and subdatos_dict_or_item.get('simulable'):
-                    # Es una subcuenta directamente simulable (ej. SUELDOS Y SALARIOS)
                     full_name = subcuenta_name
                     actual_val = subdatos_dict_or_item['actual']
                     meta_val = subdatos_dict_or_item['meta']
                     simulable_accounts_details.append({
-                        'Variable': full_name,
-                        'Actual': actual_val,
-                        'Meta': meta_val
+                        'Variable': full_name, 'Actual': actual_val, 'Meta': meta_val
                     })
 
     df_simulable = pd.DataFrame(simulable_accounts_details)
     df_simulable['Desviacion (Actual vs Meta)'] = df_simulable['Actual'] - df_simulable['Meta']
     df_simulable['Abs_Deviation'] = df_simulable['Desviacion (Actual vs Meta)'].abs()
 
-    # Filtrar solo desviaciones significativas y tomar el top N
     df_top_deviations = df_simulable[df_simulable['Abs_Deviation'] > 1000].sort_values(by='Abs_Deviation',
-                                                                                       ascending=False).head(
-        7)  # Top 7 variables recomendadas
+                                                                                       ascending=False).head(7)
 
-    # Formatear la tabla para el prompt
     top_deviations_table_md = "No se identificaron desviaciones significativas entre el Actual y la Meta para recomendar acciones en este momento."
     if not df_top_deviations.empty:
         top_deviations_table_md = "A continuación, se presenta una tabla con las **variables que muestran las mayores desviaciones monetarias entre su valor Actual y la Meta**. Estas son las áreas clave recomendadas para enfocar tus esfuerzos de simulación, ya que representan el mayor potencial de mejora o riesgo:\n\n"
@@ -471,7 +503,6 @@ def generar_recomendacion_variables_ia(df_completo):
             top_deviations_table_md += f"| {row['Variable']} | ${row['Actual']:,.0f} | ${row['Meta']:,.0f} | ${row['Desviacion (Actual vs Meta)']:+,.0f} |\n"
         top_deviations_table_md += "\n"
 
-    # Contexto mejorado de la empresa PORTAWARE
     company_context = """
     La empresa es **PORTAWARE**, fabricante de artículos para el hogar, predominantemente de plástico. Tienen fuertes expectativas de crecimiento a nivel nacional y están comenzando a expandirse en mercados internacionales. El ambiente económico actual es volátil, con presiones inflacionarias en materias primas (plástico, derivados del petróleo) y fluctuaciones en las tasas de cambio. La estrategia de la empresa debe enfocarse en la eficiencia operativa, la gestión de costos, y la optimización de ingresos en un entorno de expansión.
     """
@@ -506,6 +537,7 @@ def generar_recomendacion_variables_ia(df_completo):
 
 
 def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta', simulado_col='Simulado'):
+    """Genera un análisis estratégico detallado con IA, incluyendo razones financieras."""
     if not GEMINI_AVAILABLE:
         return "⚠️ **Error**: La API de Gemini no está configurada."
 
@@ -514,7 +546,6 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
     df_analisis['Brecha Simulado vs Actual'] = df_analisis[simulado_col] - df_analisis[actual_col]
     df_analisis['Brecha Simulado vs Meta'] = df_analisis[simulado_col] - df_analisis[meta_col]
 
-    # Asegurar el orden de las cuentas para el análisis, usando la jerarquía
     cuentas_para_ia = df_analisis.sort_values(by='Jerarquia').reset_index(drop=True)
 
     # --- CÁLCULO DE RAZONES FINANCIERAS ---
@@ -522,7 +553,7 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
 
     # Obtener valores necesarios para los cálculos, manejando casos donde el denominador es cero
     ventas_netas_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'VENTAS NETAS', actual_col].iloc[
-        0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 0
+        0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 1
     margen_bruto_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', actual_col].iloc[
         0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
     ebitda_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', actual_col].iloc[0] if 'EBITDA' in \
@@ -533,7 +564,7 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
                                                                                                     'Cuenta'].values else 0
 
     ventas_netas_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'VENTAS NETAS', meta_col].iloc[
-        0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 0
+        0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 1
     margen_bruto_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', meta_col].iloc[
         0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
     ebitda_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', meta_col].iloc[0] if 'EBITDA' in \
@@ -543,7 +574,7 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
         'Cuenta'].values else 0
 
     ventas_netas_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'VENTAS NETAS', simulado_col].iloc[
-        0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 0
+        0] if 'VENTAS NETAS' in cuentas_para_ia['Cuenta'].values else 1
     margen_bruto_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', simulado_col].iloc[
         0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
     ebitda_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', simulado_col].iloc[0] if 'EBITDA' in \
@@ -580,7 +611,7 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
     df_razones['Brecha Simulado vs Actual (%)'] = df_razones['Simulado'] - df_razones['Actual']
     df_razones['Brecha Simulado vs Meta (%)'] = df_razones['Simulado'] - df_razones['Meta']
 
-    # Formatear números para el prompt de IA
+    # Formatear números para el prompt de IA (sin comas para evitar problemas de interpretación, pero con signo)
     cols_for_prompt_df = cuentas_para_ia[['Cuenta', actual_col, meta_col, simulado_col,
                                           'Brecha Actual vs Meta', 'Brecha Simulado vs Actual',
                                           'Brecha Simulado vs Meta']].copy()
@@ -647,7 +678,9 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
 # --- INTERFAZ DE USUARIO ---
 st.title('📊 Simulador Financiero Jerárquico')
 st.caption(
-    f"Simulación detallada con estructura de subcuentas. Estado de IA: {'✅ Conectada' if GEMINI_AVAILABLE else '❌ No disponible'}")
+    "Simulación detallada con estructura de subcuentas. "
+    f"Estado de IA: {'✅ Conectada' if GEMINI_AVAILABLE else '❌ No disponible'}"
+)
 
 # Inicializa el estado de las simulaciones
 inicializar_simulaciones()
@@ -656,79 +689,79 @@ inicializar_simulaciones()
 with st.sidebar:
     st.header("⚙️ Controles de Simulación")
 
-    # --- MÓDULO DE AJUSTE AUTOMÁTICO DE COSTOS ---
     st.markdown("---")
     st.subheader("📦 Ajuste Automático de Costos")
 
-    # Interruptor para activar/desactivar el ajuste de costos
-    # Se usa 'key' para que el estado persista en session_state
+    # Checkbox para activar/desactivar el ajuste automático de costos
     st.session_state['ajuste_activo'] = st.checkbox(
         "Activar ajuste automático de costos",
-        value=st.session_state.get('ajuste_activo', False),  # Usar el valor existente o False por defecto
+        value=st.session_state.get('ajuste_activo', False),
         key='ajuste_activo_checkbox_widget',  # Clave única para el widget
         help="Vincula el costo de materiales con el incremento en ventas brutas nacionales"
     )
 
     if st.session_state['ajuste_activo']:
-        # Control deslizante para el porcentaje de ajuste
-        # Se usa 'key' para que el valor persista en session_state
+        # Slider para el porcentaje de ajuste, solo visible si el ajuste está activo
         st.session_state['porcentaje_ajuste'] = st.slider(
             "Porcentaje de ajuste sobre aumento de ventas brutas nacionales (%)",
-            0, 100, st.session_state.get('porcentaje_ajuste', 45),  # Usar el valor existente o 45 por defecto
+            0, 100, st.session_state.get('porcentaje_ajuste', 45),
             key='porcentaje_ajuste_slider_widget',  # Clave única para el widget
             help="El costo de Materiales A Proceso se ajustará en este porcentaje del cambio en Ventas Brutas Nacionales (Retail, Catálogo y Mayoreo)"
         )
-    # else: # Esto es clave: si el ajuste está desactivado, el valor en session_state DEBE ser 0.
-    #     st.session_state['sim_COSTO_DIRECTO_MATERIALES_A_PROCESO'] = 0.0 # ¡NO HAGAS ESTO AQUÍ! Genera un loop infinito.
-    # La lógica de reseteo debe estar ANTES de generar el df_completo.
 
     st.markdown("---")
     st.subheader("🎭 Escenarios Rápidos")
     col1_scenario, col2_scenario = st.columns(2)
     with col1_scenario:
-        # Botón "Refrescar Simulador" para resetear los valores a cero
+        # Botón para refrescar el simulador y resetear todos los valores
         if st.button("🔄 Refrescar Simulador", use_container_width=True,
                      help="Restablece todos los simuladores a cero."):
-            for key in list(
-                    st.session_state.keys()):
+            for key in list(st.session_state.keys()):
                 if key.startswith('sim_'):
                     st.session_state[key] = 0.0
             st.session_state['ajuste_activo'] = False  # Resetear también el ajuste automático
             st.session_state['porcentaje_ajuste'] = 45  # Resetear su valor por defecto
+            st.session_state['mobile_view_checkbox'] = False  # Resetear la vista móvil
             st.rerun()
 
     with col2_scenario:
+        # Botón para simular un aumento del 10% en ventas nacionales específicas
         if st.button("📈 Simular +10% en Ventas Nacionales", use_container_width=True,
-                     help="Aumenta en un 10% del valor actual las ventas nacionales de Retail y Mayoreo"):
+                     help="Aumenta en un 10% del valor actual las ventas nacionales de Retail, Catálogo y Mayoreo"):
             estructura = get_cached_structure()
+            # Se obtienen los valores actuales para calcular el 10% de aumento
             retail_actual = get_actual_value(estructura, 'VENTAS BRUTAS', 'VENTAS BRUTAS NACIONAL 16%', 'RETAIL')
             mayoreo_actual = get_actual_value(estructura, 'VENTAS BRUTAS', 'VENTAS BRUTAS NACIONAL 16%', 'MAYOREO')
             catalogo_actual = get_actual_value(estructura, 'VENTAS BRUTAS', 'VENTAS BRUTAS NACIONAL 16%', 'CATALOGO')
 
+            # Se aplican los cambios a st.session_state
             st.session_state['sim_VENTAS_BRUTAS_NACIONAL_16%_RETAIL'] = retail_actual * 0.10
             st.session_state['sim_VENTAS_BRUTAS_NACIONAL_16%_MAYOREO'] = mayoreo_actual * 0.10
-            st.session_state[
-                'sim_VENTAS_BRUTAS_NACIONAL_16%_CATALOGO'] = catalogo_actual * 0.10  # Asegurar que Catalogo también se incluya en la simulación rápida
+            st.session_state['sim_VENTAS_BRUTAS_NACIONAL_16%_CATALOGO'] = catalogo_actual * 0.10
             st.rerun()
 
     st.markdown("---")
 
     estructura = get_cached_structure()
+    # Se usan tabs para organizar los controles y mejorar la navegación en móvil
     tab_ventas, tab_costos, tab_gastos, tab_otros = st.tabs(["💰 Ventas", "🏭 Costos", "💸 Gastos", "📊 Otros"])
 
 
+    # Función auxiliar para mostrar el valor actual, cambio y porcentaje de cambio debajo de cada input
     def display_number_input_info_with_actual(key, actual_val):
         current_change = st.session_state.get(key, 0.0)
         percentage_change = 0.0
         if actual_val != 0:
             percentage_change = (current_change / actual_val) * 100
-        elif current_change != 0:
+        elif current_change != 0:  # Si actual_val es 0 pero hay un cambio, el porcentaje es "infinito"
             percentage_change = float('inf') if current_change > 0 else float('-inf')
 
         st.caption(
-            f"**Valor Actual:** ${actual_val:,.0f} | **Cambio Actual:** ${current_change:,.0f} ({percentage_change:+.1f}%)")
+            f"**Valor Actual:** ${actual_val:,.0f} | **Cambio:** ${current_change:,.0f} ({percentage_change:+.1f}%)"
+        )
 
 
+    # Sección de Ventas en el sidebar
     with tab_ventas:
         st.subheader("Ventas por Canal")
         with st.expander("🏠 Ventas Nacionales", expanded=True):
@@ -767,43 +800,43 @@ with st.sidebar:
                         step=100.0, key=key)
         display_number_input_info_with_actual(key, actual_otros_ingresos)
 
+    # Sección de Costos en el sidebar
     with tab_costos:
         st.subheader("Estructura de Costos")
         with st.expander("🎯 Costos Directos", expanded=True):
-            # Iterar sobre las cuentas de costo directo
             for item, datos in estructura['COSTO']['subcuentas']['COSTO DIRECTO'].items():
                 key = f"sim_COSTO_DIRECTO_{item.replace(' ', '_')}"
                 actual_val = get_actual_value(estructura, 'COSTO', 'COSTO DIRECTO', item)
                 min_val = -float(actual_val * 2) if actual_val > 0 else -50000000.0
                 max_val = float(actual_val * 2) if actual_val > 0 else 50000000.0
 
-                # Para "Materiales A Proceso", el control manual se desactiva si el ajuste automático está activo
-                if item == 'MATERIALES A PROCESO' and st.session_state.get('ajuste_activo', False):
-                    # Mostrar el valor del ajuste automático
-                    actual_mat_proceso = get_actual_value(estructura, 'COSTO', 'COSTO DIRECTO', 'MATERIALES A PROCESO')
+                # Lógica para el campo "Materiales A Proceso"
+                if item == 'MATERIALES A PROCESO':
+                    if st.session_state.get('ajuste_activo', False):
+                        cambio_ventas_brutas_nacional = 0
+                        for canal_vn in ['RETAIL', 'CATALOGO', 'MAYOREO']:
+                            cambio_ventas_brutas_nacional += st.session_state.get(
+                                f"sim_VENTAS_BRUTAS_NACIONAL_16%_{canal_vn}", 0.0)
 
-                    # Calcular el cambio en ventas brutas para mostrar el ajuste en Materiales A Proceso
-                    cambio_ventas_brutas_nacional = 0
-                    for canal in ['RETAIL', 'CATALOGO', 'MAYOREO']:
-                        cambio_ventas_brutas_nacional += st.session_state.get(f"sim_VENTAS_BRUTAS_NACIONAL_16%_{canal}",
-                                                                              0.0)
+                        porcentaje_ajuste_val = st.session_state.get('porcentaje_ajuste', 45)
+                        ajuste_automatico_para_display = (porcentaje_ajuste_val / 100) * cambio_ventas_brutas_nacional
 
-                    porcentaje_ajuste_val = st.session_state.get('porcentaje_ajuste', 45)
-                    ajuste_automatico_para_display = (porcentaje_ajuste_val / 100) * cambio_ventas_brutas_nacional
-
-                    st.number_input(f"{item.replace('_', ' ').title()}",
-                                    min_value=min_val,
-                                    max_value=max_val,
-                                    value=ajuste_automatico_para_display,
-                                    # Mostrar el valor calculado por el ajuste automático
-                                    step=1000.0,
-                                    key=key,
-                                    disabled=True,  # Desactivar el input manual
-                                    help="Este valor se ajusta automáticamente según el 'Ajuste Automático de Costos'."
-                                    )
-                    st.caption(
-                        f"**Valor Actual (Base):** ${actual_val:,.0f} | **Ajuste Automático:** ${ajuste_automatico_para_display:,.0f}"
-                    )
+                        st.number_input(f"{item.replace('_', ' ').title()}",
+                                        min_value=min_val,
+                                        max_value=max_val,
+                                        value=ajuste_automatico_para_display,
+                                        step=1000.0,
+                                        key=key,
+                                        disabled=True,
+                                        help="Este valor se ajusta automáticamente según el 'Ajuste Automático de Costos'."
+                                        )
+                        st.caption(
+                            f"**Valor Actual (Base):** ${actual_val:,.0f} | **Ajuste Automático:** ${ajuste_automatico_para_display:,.0f}"
+                        )
+                    else:
+                        st.number_input(f"{item.replace('_', ' ').title()}", min_value=min_val, max_value=max_val,
+                                        value=st.session_state.get(key, 0.0), step=1000.0, key=key)
+                        display_number_input_info_with_actual(key, actual_val)
                 else:
                     st.number_input(f"{item.replace('_', ' ').title()}", min_value=min_val, max_value=max_val,
                                     value=st.session_state.get(key, 0.0), step=1000.0, key=key)
@@ -827,6 +860,7 @@ with st.sidebar:
                         step=100.0, key=key)
         display_number_input_info_with_actual(key, actual_otros_costos)
 
+    # Sección de Gastos en el sidebar
     with tab_gastos:
         st.subheader("Gastos Operativos")
         grupos_gastos = {
@@ -873,6 +907,7 @@ with st.sidebar:
                                     value=st.session_state.get(key, 0.0), step=10.0, key=key)
                     display_number_input_info_with_actual(key, actual_val)
 
+    # Sección de Otros en el sidebar
     with tab_otros:
         st.subheader("Otros Conceptos")
         key = 'sim_TOTAL_DE_OTROS_GASTOS'
@@ -905,13 +940,15 @@ with st.sidebar:
 # Obtener cambios actuales de todos los simuladores manuales
 changes = {key: value for key, value in st.session_state.items() if key.startswith('sim_')}
 
-# Lógica CLAVE para el ajuste automático de costos
+# Lógica CLAVE para el ajuste automático de costos: se aplica ANTES de generar el dataframe
 key_materiales_proceso = 'sim_COSTO_DIRECTO_MATERIALES_A_PROCESO'
 if st.session_state.get('ajuste_activo', False):
     # Si el ajuste automático está activo, calcula y aplica el ajuste
     cambio_ventas_brutas_nacional = 0
+    # Sumar los cambios de los inputs de ventas nacionales (Retail, Catalogo, Mayoreo)
     for canal in ['RETAIL', 'CATALOGO', 'MAYOREO']:
         key_ventas_nacional = f"sim_VENTAS_BRUTAS_NACIONAL_16%_{canal}"
+        # Asegurarse de que el valor exista en session_state, si no, es 0
         cambio_ventas_brutas_nacional += st.session_state.get(key_ventas_nacional, 0.0)
 
     porcentaje_ajuste = st.session_state.get('porcentaje_ajuste', 45)
@@ -920,25 +957,23 @@ if st.session_state.get('ajuste_activo', False):
 else:
     # Si el ajuste automático NO está activo, asegura que el cambio en Materiales A Proceso sea cero
     changes[key_materiales_proceso] = 0.0
-    # Opcional: Si quieres que el usuario pueda ingresar un valor manual cuando el ajuste está apagado,
-    # necesitarías que el number_input para Materiales A Proceso NO esté disabled cuando ajuste_activo es False.
-    # En ese caso, la línea `changes[key_materiales_proceso] = 0.0` se ejecutaría solo si no hay un input manual para esa variable.
-    # Por ahora, con disabled=True, esta línea es necesaria para resetear el efecto al desactivar.
 
 # Generar dataframe con los cambios actualizados
 df_completo = generar_dataframe_completo(changes)
 df_variables_mod = obtener_variables_modificadas(changes)
 
+# Pestañas principales para organizar el contenido en el dashboard
 tab1, tab2, tab3 = st.tabs(["📊 Dashboard de Brechas", "📈 Análisis Visual", "🤖 IA: Brecha a Meta y Razones"])
 
+# --- TAB 1: DASHBOARD DE BRECHAS ---
 with tab1:
     st.header("Dashboard de Brechas vs. Meta")
+    # Mensaje para usuarios móviles indicando dónde están los controles
+    st.info("💡 **Consejo móvil:** En dispositivos pequeños, los controles de simulación están en el menú lateral (☰).")
 
-    # Métricas principales - Comparar Simulado vs Meta
+    # Métricas principales (VENTAS NETAS, MARGEN BRUTO, EBITDA, BAI)
     col1, col2, col3, col4 = st.columns(4)
-    metricas = {'VENTAS NETAS': col1, 'MARGEN BRUTO': col2, 'EBITDA': col3, 'BAI': col4}
 
-    # Obtener valores para mostrar
     ventas_netas = df_completo.loc[df_completo['Cuenta'] == 'VENTAS NETAS', 'Simulado'].iloc[0]
     margen_bruto = df_completo.loc[df_completo['Cuenta'] == 'MARGEN BRUTO', 'Simulado'].iloc[0]
     ebitda = df_completo.loc[df_completo['Cuenta'] == 'EBITDA', 'Simulado'].iloc[0]
@@ -949,13 +984,11 @@ with tab1:
     ebitda_meta = df_completo.loc[df_completo['Cuenta'] == 'EBITDA', 'Meta'].iloc[0]
     bai_meta = df_completo.loc[df_completo['Cuenta'] == 'BAI', 'Meta'].iloc[0]
 
-    # Calcular diferencias
     diff_ventas_netas = ventas_netas - ventas_netas_meta
     diff_margen_bruto = margen_bruto - margen_bruto_meta
     diff_ebitda = ebitda - ebitda_meta
     diff_bai = bai - bai_meta
 
-    # Mostrar métricas con colores correctos
     col1.metric("VENTAS NETAS", f"${ventas_netas:,.0f}", f"${diff_ventas_netas:+,.0f} vs Meta",
                 delta_color="normal" if diff_ventas_netas >= 0 else "inverse")
     col2.metric("MARGEN BRUTO", f"${margen_bruto:,.0f}", f"${diff_margen_bruto:+,.0f} vs Meta",
@@ -965,7 +998,7 @@ with tab1:
     col4.metric("BAI", f"${bai:,.0f}", f"${diff_bai:+,.0f} vs Meta",
                 delta_color="normal" if diff_bai >= 0 else "inverse")
 
-    # Nuevo botón para la recomendación de variables por IA
+    # Botón para obtener recomendaciones de IA sobre variables clave
     if st.button("🚀 Obtener Recomendación IA de Variables Clave", use_container_width=True, type="secondary"):
         with st.spinner("🧠 El CFO Virtual está analizando las desviaciones para darte recomendaciones..."):
             recomendacion_ia = generar_recomendacion_variables_ia(df_completo)
@@ -992,10 +1025,15 @@ with tab1:
             "🔍 **No hay variables modificadas.** Usa los controles del panel lateral para simular diferentes escenarios."
         )
 
-    # Checkbox de porcentajes
+    # Checkbox para mostrar/ocultar porcentajes y vista simplificada para móvil
     col_checkbox_percentage = st.columns(1)[0]
     with col_checkbox_percentage:
         mostrar_porcentajes = st.checkbox("📊 Mostrar % vs Ventas Netas", value=True, key="show_percentage_checkbox")
+        st.session_state['mobile_view_checkbox'] = st.checkbox(
+            "📱 Vista simplificada para móvil (menos columnas)",
+            value=st.session_state.get('mobile_view_checkbox', False),
+            key="mobile_view_checkbox_widget"
+        )
 
     # Crear df_display con las columnas necesarias
     df_display = df_completo[
@@ -1006,12 +1044,28 @@ with tab1:
         'Meta (% VN)': '% Meta vs VN'
     }, inplace=True)
 
-    # Definir las columnas a mostrar según el checkbox de porcentajes
-    if mostrar_porcentajes:
-        columnas_a_mostrar = ['Cuenta', 'Actual', 'Simulado', '% Sim. vs VN', 'Meta', '% Meta vs VN',
-                              'Brecha (% S vs M)']
+    # Definir las columnas a mostrar según los checkboxes de usuario
+    columnas_base = ['Cuenta', 'Actual', 'Simulado', 'Meta']
+    columnas_porcentajes = ['% Sim. vs VN', '% Meta vs VN']
+    columna_brecha = 'Brecha (% S vs M)'
+
+    columnas_final_a_mostrar = []
+
+    # Lógica para la vista simplificada en móvil
+    if st.session_state.get('mobile_view_checkbox', False):
+        columnas_final_a_mostrar.append('Cuenta')
+        columnas_final_a_mostrar.append('Simulado')
+        columnas_final_a_mostrar.append('Meta')
+        if mostrar_porcentajes:
+            columnas_final_a_mostrar.extend(col for col in columnas_porcentajes if col in df_display.columns)
+        columnas_final_a_mostrar.append(columna_brecha)
     else:
-        columnas_a_mostrar = ['Cuenta', 'Actual', 'Simulado', 'Meta', 'Brecha (% S vs M)']
+        columnas_final_a_mostrar.extend(col for col in columnas_base if col in df_display.columns)
+        if mostrar_porcentajes:
+            columnas_final_a_mostrar.extend(col for col in columnas_porcentajes if col in df_display.columns)
+        columnas_final_a_mostrar.append(columna_brecha)
+
+    columnas_final_a_mostrar = [col for col in columnas_final_a_mostrar if col in df_display.columns]
 
     # Formatos para la tabla
     formatos = {
@@ -1024,13 +1078,17 @@ with tab1:
     }
 
     st.subheader("Análisis Comparativo Detallado")
-    st.dataframe(aplicar_estilo_financiero(df_display[columnas_a_mostrar]).format(formatos), use_container_width=True)
+    st.dataframe(
+        aplicar_estilo_financiero(df_display[columnas_final_a_mostrar]).format(formatos),
+        use_container_width=True
+    )
 
+# --- TAB 2: ANÁLISIS VISUAL ---
 with tab2:
     st.header("Análisis Visual Intuitivo")
     st.info("Estos gráficos te ayudan a identificar rápidamente los puntos clave de tu simulación.")
-    col1, col2 = st.columns(2)
-    with col1:
+    col1_chart, col2_chart = st.columns(2)
+    with col1_chart:
         st.subheader("Puente de Utilidad (Waterfall)")
         df_sim = df_completo.set_index('Cuenta')['Simulado']
         fig_waterfall = go.Figure(go.Waterfall(
@@ -1043,9 +1101,15 @@ with tab2:
             totals={'marker': {'color': PALETA_GRAFICOS['Actual']}},
             increasing={'marker': {'color': PALETA_GRAFICOS['Positivo']}},
             decreasing={'marker': {'color': PALETA_GRAFICOS['Negativo']}}))
+
+        fig_waterfall.update_layout(
+            margin=dict(l=20, r=20, t=30, b=20),
+            height=400,
+            xaxis_tickangle=-45
+        )
         st.plotly_chart(fig_waterfall, use_container_width=True, key="waterfall_chart")
 
-    with col2:
+    with col2_chart:
         st.subheader("Composición de Costos y Gastos")
         df_costs = df_completo.set_index('Cuenta')
         fig_pie = px.pie(
@@ -1057,14 +1121,28 @@ with tab2:
             ],
             names=['Costos', 'Gastos Operativos', 'Otros Gastos', 'Financieros'],
             hole=0.4,
-            color_discrete_sequence=['#F79F1F', '#FF6B6B', '#4ECDC4', '#FFD166']
+            color_discrete_map={
+                'Costos': PALETA_GRAFICOS['Egresos'],
+                'Gastos Operativos': PALETA_GRAFICOS['Egresos'],
+                'Otros Gastos': PALETA_GRAFICOS['Egresos'],
+                'Financieros': PALETA_GRAFICOS['Egresos']
+            }
+        )
+        fig_pie.update_layout(
+            margin=dict(l=20, r=20, t=30, b=20),
+            height=400,
+            legend_orientation="h",
+            legend_yanchor="bottom",
+            legend_y=-0.2
         )
         st.plotly_chart(fig_pie, use_container_width=True, key="pie_chart")
 
+# --- TAB 3: ANÁLISIS ESTRATÉGICO CON IA ---
 with tab3:
     st.header("🤖 IA: Análisis Estratégico (Actual vs. Meta vs. Simulación)")
     st.info(
-        "Esta herramienta utiliza IA para analizar tus escenarios, proporcionando un análisis profundo y recomendaciones estratégicas, incluyendo razones financieras clave.")
+        "Esta herramienta utiliza IA para analizar tus escenarios, proporcionando un análisis profundo y recomendaciones estratégicas, incluyendo razones financieras clave."
+    )
     if st.button("🚀 Generar Análisis Estratégico", use_container_width=True, type="primary"):
         with st.spinner("🧠 El CFO Virtual está analizando tus escenarios..."):
             informe = generar_insight_financiero(df_completo)
