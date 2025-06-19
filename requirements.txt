@@ -4,3 +4,4 @@ streamlit
 google-generativeai
 tabulate
 openpyxl
+numpy
