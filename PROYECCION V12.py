@@ -1,11 +1,3 @@
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-import streamlit as st
-import google.generativeai as genai
-import json
-import os
-import numpy as np
 from openpyxl import load_workbook
 from pathlib import Path
 from datetime import datetime
@@ -21,23 +13,29 @@ st.set_page_config(page_title="Simulador Financiero Jerárquico PORTAWARE", layo
 hide_st_style = """
 <style>
 /* Oculta elementos de la interfaz de Streamlit */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
-.stDeployButton {visibility: hidden;}
-[data-testid="stToolbar"] {display: none;}
-[data-testid="stDecoration"] {display: none;}
-[data-testid="stStatusWidget"] {display: none;}
-#stStatusWidget {display: none;}
-[data-testid="baseButton-header"] {display: none;}
-.st-emotion-cache-1wbqy5l {display: none;}
-.st-emotion-cache-1y4p8pa {padding: 0; margin: 0;}
+#MainMenu {visibility: hidden !important;}
+footer {visibility: hidden !important;}
+header {visibility: hidden !important;}
+.stDeployButton {display: none !important;}
+[data-testid="stToolbar"] {display: none !important;}
+[data-testid="stDecoration"] {display: none !important;}
+[data-testid="stStatusWidget"] {display: none !important;}
+#stStatusWidget {display: none !important;}
+[data-testid="baseButton-header"] {display: none !important;}
+.st-emotion-cache-1wbqy5l {display: none !important;}
+.st-emotion-cache-1y4p8pa {padding: 0 !important; margin: 0 !important;}
+.st-emotion-cache-z5fcl4 {padding-top: 0 !important;}
+
+/* Elementos específicos de la nueva versión */
+[data-testid="collapsedControl"] {display: none !important;}
+.st-emotion-cache-1dp5vir {display: none !important;}
+.st-emotion-cache-1oe5ca2 {max-width: none !important;}
 
 /* Custom style for the small info text below inputs */
 .small-input-info p {
     font-size: 0.75rem !important;
-    margin-bottom: 2px;
-    margin-top: 2px;
+    margin-bottom: 2px !important;
+    margin-top: 2px !important;
 }
 </style>
 """
