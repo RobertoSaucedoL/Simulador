@@ -202,20 +202,20 @@ def obtener_estructura_cuentas():
     """Retorna la estructura completa de cuentas con jerarquía para PORTAWARE."""
     # Mapeo de celdas para gastos operativos
     gastos_operativos_map_cells = {
-        'SUELDOS Y SALARIOS': 'I20', 'PRESTACIONES': 'I21', 'OTRAS COMPENSACIONES': 'I22',
-        'SEGURIDAD E HIGIENE': 'I23', 'GASTOS DE PERSONAL': 'I24', 'COMBUSTIBLE': 'I25',
-        'ESTACIONAMIENTO': 'I26', 'TRANSPORTE LOCAL': 'I27', 'GASTOS DE VIAJE': 'I28',
-        'ASESORIAS PM': 'I29', 'SEGURIDAD Y VIGILANCIA': 'I30', 'SERVICIOS INSTALACIONES': 'I31',
-        'CELULARES': 'I32', 'SUMINISTROS GENERALES': 'I33', 'SUMINISTROS OFICINA': 'I34',
-        'SUMINISTROS COMPUTO': 'I35', 'ARRENDAMIENTOS': 'I36', 'MANTENIMIENTOS': 'I37',
-        'INVENTARIO FÍSICO': 'I38', 'OTROS IMPUESTOS Y DERECHOS': 'I39', 'NO DEDUCIBLES': 'I40',
-        'SEGUROS Y FIANZAS': 'I41', 'CAPACITACION Y ENTRENAMIENTO': 'I42', 'MENSAJERIA': 'I43',
-        'MUESTRAS': 'I44', 'FERIAS Y EXPOSICIONES': 'I45', 'PUBLICIDAD IMPRESA': 'I46',
-        'IMPRESIONES 3D': 'I47', 'MATERIAL DISEÑO': 'I48', 'PATENTES': 'I49',
-        'LICENCIAS Y SOFTWARE': 'I50', 'ATENCION A CLIENTES': 'I51', 'ASESORIAS PF': 'I52',
-        'PORTALES CLIENTES': 'I53', 'CUOTAS Y SUSCRIPCIONES': 'I54', 'FLETES EXTERNOS': 'I55',
-        'FLETES INTERNOS': 'I56', 'IMPTOS S/NOMINA': 'I57', 'CONTRIBUCIONES PATRONALES': 'I58',
-        'TIMBRES Y FOLIOS FISCALES': 'I59', 'COMISION MERCANTIL': 'I60', 'GASTOS ADUANALES': 'I61'
+         'SUELDOS Y SALARIOS': 'I19', 'PRESTACIONES': 'I20', 'OTRAS COMPENSACIONES': 'I21',
+        'SEGURIDAD E HIGIENE': 'I22', 'GASTOS DE PERSONAL': 'I23', 'COMBUSTIBLE': 'I24',
+        'ESTACIONAMIENTO': 'I25', 'TRANSPORTE LOCAL': 'I26', 'GASTOS DE VIAJE': 'I27',
+        'ASESORIAS PM': 'I28', 'SEGURIDAD Y VIGILANCIA': 'I29', 'SERVICIOS INSTALACIONES': 'I30',
+        'CELULARES': 'I31', 'SUMINISTROS GENERALES': 'I32', 'SUMINISTROS OFICINA': 'I33',
+        'SUMINISTROS COMPUTO': 'I34', 'ARRENDAMIENTOS': 'I35', 'MANTENIMIENTOS': 'I36',
+        'INVENTARIO FÍSICO': 'I37', 'OTROS IMPUESTOS Y DERECHOS': 'I38', 'NO DEDUCIBLES': 'I39',
+        'SEGUROS Y FIANZAS': 'I40', 'CAPACITACION Y ENTRENAMIENTO': 'I41', 'MENSAJERIA': 'I42',
+        'MUESTRAS': 'I43', 'FERIAS Y EXPOSICIONES': 'I44', 'PUBLICIDAD IMPRESA': 'I45',
+        'IMPRESIONES 3D': 'I46', 'MATERIAL DISEÑO': 'I47', 'PATENTES': 'I48',
+        'LICENCIAS Y SOFTWARE': 'I49', 'ATENCION A CLIENTES': 'I50', 'ASESORIAS PF': 'I51',
+        'PORTALES CLIENTES': 'I52', 'CUOTAS Y SUSCRIPCIONES': 'I53', 'FLETES EXTERNOS': 'I54',
+        'FLETES INTERNOS': 'I55', 'IMPTOS S/NOMINA': 'I56', 'CONTRIBUCIONES PATRONALES': 'I57',
+        'TIMBRES Y FOLIOS FISCALES': 'I58', 'COMISION MERCANTIL': 'I59', 'GASTOS ADUANALES': 'I60'
     }
 
     gastos_operativos_subcuentas = {}
@@ -259,25 +259,25 @@ def obtener_estructura_cuentas():
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['RETAIL'],
                         'simulable': True},
                     'CATALOGO': {
-                        'actual': get_cell_value('I4'),
+                        'actual': get_cell_value('I3'),
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['CATALOGO'],
                         'simulable': True},
                     'MAYOREO': {
-                        'actual': get_cell_value('I5'),
+                        'actual': get_cell_value('I4'),
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['MAYOREO'],
                         'simulable': True}
                 },
                 'VENTAS BRUTAS EXTRANJERO': {
                     'RETAIL': {
-                        'actual': get_cell_value('I6'),
+                        'actual': get_cell_value('I5'),
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['RETAIL'],
                         'simulable': True},
                     'CATALOGO': {
-                        'actual': get_cell_value('I7'),
+                        'actual': get_cell_value('I6'),
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['CATALOGO'],
                         'simulable': True},
                     'MAYOREO': {
-                        'actual': get_cell_value('I8'),
+                        'actual': get_cell_value('I7'),
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['MAYOREO'],
                         'simulable': True}
                 }
@@ -285,12 +285,12 @@ def obtener_estructura_cuentas():
         },
         'DESCUENTOS': {
             'jerarquia': '5', 'tipo': 'simple', 
-            'actual': get_cell_value('I9'),
+            'actual': get_cell_value('I8'),
             'meta': META_VALUES['DESCUENTOS'],
             'simulable': True},
         'OTROS INGRESOS': {
             'jerarquia': '5.3', 'tipo': 'simple', 
-            'actual': get_cell_value('I10'),
+            'actual': get_cell_value('I9'),
             'meta': META_VALUES['OTROS INGRESOS'],
             'simulable': True},
         'VENTAS NETAS': {'jerarquia': '6', 'tipo': 'formula', 'formula': 'VENTAS BRUTAS - DESCUENTOS + OTROS INGRESOS'},
@@ -299,28 +299,26 @@ def obtener_estructura_cuentas():
             'componentes': ['COSTO DIRECTO', 'COSTO INDIRECTO', 'OTROS COSTOS'],
             'subcuentas': {
                 'COSTO DIRECTO': {
-                    'MATERIALES A PROCESO': {
-                        'actual': get_cell_value('I13'),
-                        'meta': META_VALUES['COSTO']['COSTO DIRECTO']['MATERIALES A PROCESO'],
-                        'simulable': True},
-                    'MANO DE OBRA ARMADO': {
-                        'actual': get_cell_value('I14'),
-                        'meta': META_VALUES['COSTO']['COSTO DIRECTO']['MANO DE OBRA ARMADO'],
-                        'simulable': True}
+                  'MATERIALES A PROCESO': {'actual': obtener_valor_celda('I12'),
+                                             'meta': META_VALUES['COSTO']['COSTO DIRECTO']['MATERIALES A PROCESO'],
+                                             'simulable': True},
+                    'MANO DE OBRA ARMADO': {'actual': obtener_valor_celda('I13'),
+                                            'meta': META_VALUES['COSTO']['COSTO DIRECTO']['MANO DE OBRA ARMADO'],
+                                            'simulable': True}
                 },
                 'COSTO INDIRECTO': {
                     'COSTOS DE CALIDAD': {
-                        'actual': get_cell_value('I15'),
+                        'actual': get_cell_value('I14'),
                         'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE CALIDAD'],
                         'simulable': True},
                     'COSTOS DE MOLDES': {
-                        'actual': get_cell_value('I16'),
+                        'actual': get_cell_value('I15'),
                         'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE MOLDES'],
                         'simulable': True}
                 },
                 'OTROS COSTOS': {
                     'OTROS COSTOS': {
-                        'actual': get_cell_value('I17'),
+                        'actual': get_cell_value('I16'),
                         'meta': META_VALUES['COSTO']['OTROS COSTOS'],
                         'simulable': True}}
             }
@@ -334,7 +332,7 @@ def obtener_estructura_cuentas():
                              'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
         'TOTAL DE OTROS GASTOS': {
             'jerarquia': '11', 'tipo': 'simple', 
-            'actual': get_cell_value('I63'),
+            'actual': get_cell_value('I62'),
             'meta': META_VALUES['TOTAL DE OTROS GASTOS'],
             'simulable': True},
         'EBITDA': {'jerarquia': '12', 'tipo': 'formula', 'formula': 'EBITDA OPERATIVA - TOTAL DE OTROS GASTOS'},
@@ -343,15 +341,15 @@ def obtener_estructura_cuentas():
             'componentes': ['GASTOS FINANCIEROS', 'PRODUCTOS FINANCIEROS', 'RESULTADO CAMBIARIO'],
             'subcuentas': {
                 'GASTOS FINANCIEROS': {
-                    'actual': get_cell_value('I66'),
+                    'actual': get_cell_value('I65'),
                     'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['GASTOS FINANCIEROS'],
                     'simulable': True},
                 'PRODUCTOS FINANCIEROS': {
-                    'actual': get_cell_value('I67'),
+                    'actual': get_cell_value('I66'),
                     'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['PRODUCTOS FINANCIEROS'],
                     'simulable': True},
                 'RESULTADO CAMBIARIO': {
-                    'actual': get_cell_value('I68'),
+                    'actual': get_cell_value('I67'),
                     'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['RESULTADO CAMBIARIO'],
                     'simulable': True}
             }
