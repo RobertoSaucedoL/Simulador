@@ -202,7 +202,7 @@ def obtener_estructura_cuentas():
     """Retorna la estructura completa de cuentas con jerarquía para PORTAWARE."""
     # Mapeo de celdas para gastos operativos
     gastos_operativos_map_cells = {
-         'SUELDOS Y SALARIOS': 'I19', 'PRESTACIONES': 'I20', 'OTRAS COMPENSACIONES': 'I21',
+        'SUELDOS Y SALARIOS': 'I19', 'PRESTACIONES': 'I20', 'OTRAS COMPENSACIONES': 'I21',
         'SEGURIDAD E HIGIENE': 'I22', 'GASTOS DE PERSONAL': 'I23', 'COMBUSTIBLE': 'I24',
         'ESTACIONAMIENTO': 'I25', 'TRANSPORTE LOCAL': 'I26', 'GASTOS DE VIAJE': 'I27',
         'ASESORIAS PM': 'I28', 'SEGURIDAD Y VIGILANCIA': 'I29', 'SERVICIOS INSTALACIONES': 'I30',
@@ -219,87 +219,62 @@ def obtener_estructura_cuentas():
     }
 
     gastos_operativos_subcuentas = {}
-    for gasto, cell_ref in gastos_operativos_map_cells.items():
-        # Convertir referencia de celda a índices
-        col = ord(cell_ref[0]) - ord('A')
-        row = int(cell_ref[1:]) - 1
-        
-        # Obtener valor de la celda
-        try:
-            actual_val = st.session_state.excel_data.iloc[row, col]
-            if actual_val is None:
-                actual_val = 0
-        except:
-            actual_val = 0
-        
+    for gasto, cell in gastos_operativos_map_cells.items():
         gastos_operativos_subcuentas[gasto] = {
-            'actual': actual_val,
+            'actual': obtener_valor_celda(cell),
             'meta': META_VALUES['GASTOS_OPERATIVOS_INDIVIDUALES'].get(gasto, 0),
             'simulable': True
         }
 
-    # Función auxiliar para obtener valores de celdas específicas
-    def get_cell_value(cell_ref):
-        col = ord(cell_ref[0]) - ord('A')
-        row = int(cell_ref[1:]) - 1
-        try:
-            value = st.session_state.excel_data.iloc[row, col]
-            return value if value is not None else 0
-        except:
-            return 0
-
     return {
+        # Nivel 4 - VENTAS BRUTAS (INGRESO)
         'VENTAS BRUTAS': {
             'jerarquia': '4', 'tipo': 'suma',
             'componentes': ['VENTAS BRUTAS NACIONAL 16%', 'VENTAS BRUTAS EXTRANJERO'],
             'subcuentas': {
                 'VENTAS BRUTAS NACIONAL 16%': {
-                    'RETAIL': {
-                        'actual': get_cell_value('I2'),
-                        'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['RETAIL'],
-                        'simulable': True},
-                    'CATALOGO': {
-                        'actual': get_cell_value('I4'),
-                        'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['CATALOGO'],
-                        'simulable': True},
-                    'MAYOREO': {
-                        'actual': get_cell_value('I3'),
-                        'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['MAYOREO'],
-                        'simulable': True}
+                    'RETAIL': {'actual': obtener_valor_celda('I2'),
+                               'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['RETAIL'],
+                               'simulable': True},
+                    'CATALOGO': {'actual': obtener_valor_celda('I3'),
+                                 'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['CATALOGO'],
+                                 'simulable': True},
+                    'MAYOREO': {'actual': obtener_valor_celda('I4'),
+                                'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['MAYOREO'],
+                                'simulable': True}
                 },
                 'VENTAS BRUTAS EXTRANJERO': {
-                    'RETAIL': {
-                        'actual': get_cell_value('I5'),
-                        'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['RETAIL'],
-                        'simulable': True},
-                    'CATALOGO': {
-                        'actual': get_cell_value('I6'),
-                        'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['CATALOGO'],
-                        'simulable': True},
-                    'MAYOREO': {
-                        'actual': get_cell_value('I7'),
-                        'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['MAYOREO'],
-                        'simulable': True}
+                    'RETAIL': {'actual': obtener_valor_celda('I5'),
+                               'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['RETAIL'],
+                               'simulable': True},
+                    'CATALOGO': {'actual': obtener_valor_celda('I6'),
+                                 'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['CATALOGO'],
+                                 'simulable': True},
+                    'MAYOREO': {'actual': obtener_valor_celda('I7'),
+                                'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['MAYOREO'],
+                                'simulable': True}
                 }
             }
         },
-        'DESCUENTOS': {
-            'jerarquia': '5', 'tipo': 'simple', 
-            'actual': get_cell_value('I8'),
-            'meta': META_VALUES['DESCUENTOS'],
-            'simulable': True},
-        'OTROS INGRESOS': {
-            'jerarquia': '5.3', 'tipo': 'simple', 
-            'actual': get_cell_value('I9'),
-            'meta': META_VALUES['OTROS INGRESOS'],
-            'simulable': True},
+
+        # Nivel 5 - DESCUENTOS Y OTROS (DESCUENTOS son una reducción de ingresos, OTROS INGRESOS es un ingreso)
+        'DESCUENTOS': {'jerarquia': '5', 'tipo': 'simple', 'actual': obtener_valor_celda('I8'),
+                       'meta': META_VALUES['DESCUENTOS'],
+                       'simulable': True},
+        'OTROS INGRESOS': {'jerarquia': '5.3', 'tipo': 'simple', 'actual': obtener_valor_celda('I9'),
+                           'meta': META_VALUES['OTROS INGRESOS'],
+                           'simulable': True},
+
+        # Nivel 6 - VENTAS NETAS (INGRESO CLAVE)
         'VENTAS NETAS': {'jerarquia': '6', 'tipo': 'formula', 'formula': 'VENTAS BRUTAS - DESCUENTOS + OTROS INGRESOS'},
+
+        # Nivel 7 - COSTOS (EGRESO)
         'COSTO': {
             'jerarquia': '7', 'tipo': 'suma',
             'componentes': ['COSTO DIRECTO', 'COSTO INDIRECTO', 'OTROS COSTOS'],
             'subcuentas': {
                 'COSTO DIRECTO': {
-                  'MATERIALES A PROCESO': {'actual': obtener_valor_celda('I12'),
+                    'MATERIALES A PROCESO': {'actual': obtener_valor_celda('I12'),
                                              'meta': META_VALUES['COSTO']['COSTO DIRECTO']['MATERIALES A PROCESO'],
                                              'simulable': True},
                     'MANO DE OBRA ARMADO': {'actual': obtener_valor_celda('I13'),
@@ -307,51 +282,49 @@ def obtener_estructura_cuentas():
                                             'simulable': True}
                 },
                 'COSTO INDIRECTO': {
-                    'COSTOS DE CALIDAD': {
-                        'actual': get_cell_value('I14'),
-                        'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE CALIDAD'],
-                        'simulable': True},
-                    'COSTOS DE MOLDES': {
-                        'actual': get_cell_value('I15'),
-                        'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE MOLDES'],
-                        'simulable': True}
+                    'COSTOS DE CALIDAD': {'actual': obtener_valor_celda('I14'),
+                                          'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE CALIDAD'],
+                                          'simulable': True},
+                    'COSTOS DE MOLDES': {'actual': obtener_valor_celda('I15'),
+                                         'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE MOLDES'],
+                                         'simulable': True}
                 },
                 'OTROS COSTOS': {
-                    'OTROS COSTOS': {
-                        'actual': get_cell_value('I16'),
-                        'meta': META_VALUES['COSTO']['OTROS COSTOS'],
-                        'simulable': True}}
+                    'OTROS COSTOS': {'actual': obtener_valor_celda('I16'), 'meta': META_VALUES['COSTO']['OTROS COSTOS'],
+                                     'simulable': True}}
             }
         },
+
+        # Nivel 8 - MARGEN BRUTO
         'MARGEN BRUTO': {'jerarquia': '8', 'tipo': 'formula', 'formula': 'VENTAS NETAS - COSTO'},
+
+        # Nivel 9 - GASTOS OPERATIVOS (EGRESO)
         'TOTAL GASTOS OPERATIVOS': {
             'jerarquia': '9', 'tipo': 'suma_gastos',
-            'subcuentas': gastos_operativos_subcuentas
+            'subcuentas': gastos_operativos_subcuentas  # Se asigna el diccionario generado dinámicamente
         },
+
+        # Resto de la estructura
         'EBITDA OPERATIVA': {'jerarquia': '10', 'tipo': 'formula',
                              'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
-        'TOTAL DE OTROS GASTOS': {
-            'jerarquia': '11', 'tipo': 'simple', 
-            'actual': get_cell_value('I62'),
-            'meta': META_VALUES['TOTAL DE OTROS GASTOS'],
-            'simulable': True},
+        'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': obtener_valor_celda('I62'),
+                                  'meta': META_VALUES['TOTAL DE OTROS GASTOS'],
+                                  'simulable': True},
         'EBITDA': {'jerarquia': '12', 'tipo': 'formula', 'formula': 'EBITDA OPERATIVA - TOTAL DE OTROS GASTOS'},
         'FINANCIEROS': {
             'jerarquia': '13', 'tipo': 'suma',
             'componentes': ['GASTOS FINANCIEROS', 'PRODUCTOS FINANCIEROS', 'RESULTADO CAMBIARIO'],
             'subcuentas': {
-                'GASTOS FINANCIEROS': {
-                    'actual': get_cell_value('I65'),
-                    'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['GASTOS FINANCIEROS'],
-                    'simulable': True},
-                'PRODUCTOS FINANCIEROS': {
-                    'actual': get_cell_value('I66'),
-                    'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['PRODUCTOS FINANCIEROS'],
-                    'simulable': True},
-                'RESULTADO CAMBIARIO': {
-                    'actual': get_cell_value('I67'),
-                    'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['RESULTADO CAMBIARIO'],
-                    'simulable': True}
+                # Valores tomados directamente de la imagen para 'meta' y 'actual'
+                'GASTOS FINANCIEROS': {'actual': obtener_valor_celda('I65'),
+                                       'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['GASTOS FINANCIEROS'],
+                                       'simulable': True},
+                'PRODUCTOS FINANCIEROS': {'actual': obtener_valor_celda('I66'),
+                                          'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['PRODUCTOS FINANCIEROS'],
+                                          'simulable': True},
+                'RESULTADO CAMBIARIO': {'actual': obtener_valor_celda('I67'),
+                                        'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['RESULTADO CAMBIARIO'],
+                                        'simulable': True}
             }
         },
         'BAI': {'jerarquia': '14', 'tipo': 'formula', 'formula': 'EBITDA - FINANCIEROS'}
