@@ -255,7 +255,7 @@ def obtener_estructura_cuentas():
             'subcuentas': {
                 'VENTAS BRUTAS NACIONAL 16%': {
                     'RETAIL': {
-                        'actual': get_cell_value('I3'),
+                        'actual': get_cell_value('I2'),
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['RETAIL'],
                         'simulable': True},
                     'CATALOGO': {
