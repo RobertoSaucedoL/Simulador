@@ -232,8 +232,7 @@ META_VALUES = {
         'SUMINISTROS OFICINA': 66600,
         'SUMINISTROS COMPUTO': 49200,
         'ARRENDAMIENTOS': 6448852,
-        # Corrected: Changed 'USD 355000' to a number
-        'MANTENIMIENTOS': 355000,
+        'MANTENIMIENTOS': 355000, # Corrected: Changed from string to integer/float
         'INVENTARIO FÍSICO': 50000,
         'OTROS IMPUESTOS Y DERECHOS': 0,
         'NO DEDUCIBLES': 3000,
@@ -421,7 +420,6 @@ def get_actual_value(estructura, account_key, sub_account_key=None, sub_item_key
     else:
         return estructura.get(account_key, {}).get('actual', 0)
 
-
 # Helper function to get the meta value of a specific simulable account
 def get_meta_value(estructura, account_key, sub_account_key=None, sub_item_key=None):
     if sub_account_key and sub_item_key:
@@ -464,7 +462,7 @@ def inicializar_simulaciones():
     # Inicializar el estado de los escenarios guardados
     if 'saved_scenarios' not in st.session_state:
         st.session_state['saved_scenarios'] = {}
-        load_scenarios_from_file()  # Load on first run
+        load_scenarios_from_file() # Load on first run
 
 
 def calculate_account_value(_estructura, scenario, changes):
@@ -666,7 +664,7 @@ def obtener_variables_modificadas(changes):
         key_materiales_proceso = 'sim_COSTO_DIRECTO_MATERIALES_A_PROCESO'
         ajuste_val = changes.get(key_materiales_proceso, 0.0)
         actual_val_mp = get_actual_value(estructura, 'COSTO', 'COSTO DIRECTO', 'MATERIALES A PROCESO')
-        if ajuste_val != 0:  # Only add if there's an actual adjustment
+        if ajuste_val != 0: # Only add if there's an actual adjustment
             porcentaje_cambio_mp = 0.0
             if actual_val_mp != 0:
                 porcentaje_cambio_mp = (ajuste_val / actual_val_mp) * 100
@@ -755,7 +753,7 @@ def generar_recomendacion_variables_ia(df_completo):
             meta_val = df_completo.loc[df_completo['Cuenta'] == cuenta_name, 'Meta'].iloc[0] if cuenta_name in \
                                                                                                 df_completo[
                                                                                                     'Cuenta'].values else \
-                datos['meta']
+            datos['meta']
             simulable_accounts_details.append({
                 'Variable': cuenta_name, 'Actual': actual_val, 'Meta': meta_val
             })
@@ -938,7 +936,7 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
     {company_context}
 
     **Variables Clave con Mayores Desviaciones (si disponibles):**
-    {top_deviations_context_for_insight}
+    {top_deviations_context_for_insight} # Corrected variable name in f-string
 
     **Datos Financieros Clave (Valores Absolutos):**
     {analysis_table_md}
@@ -970,10 +968,8 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
     except Exception as e:
         return f"❌ **Error al contactar la API de Gemini**: {e}"
 
-
 # --- SCENARIO MANAGEMENT FUNCTIONS ---
 SCENARIOS_FILE = "saved_scenarios.json"
-
 
 def load_scenarios_from_file():
     """Loads saved scenarios from a JSON file into st.session_state."""
@@ -987,12 +983,10 @@ def load_scenarios_from_file():
     else:
         st.session_state['saved_scenarios'] = {}
 
-
 def save_scenarios_to_file():
     """Saves current scenarios from st.session_state to a JSON file."""
     with open(SCENARIOS_FILE, 'w') as f:
         json.dump(st.session_state['saved_scenarios'], f)
-
 
 def save_current_scenario_callback():
     """Callback to save the current simulation state as a named scenario."""
@@ -1000,16 +994,14 @@ def save_current_scenario_callback():
     if scenario_name:
         current_changes = {key: value for key, value in st.session_state.items() if key.startswith('sim_')}
         # Filter out adjustment state variables to only save the manual inputs
-        current_changes_filtered = {k: v for k, v in current_changes.items() if
-                                    not k.startswith('sim_COSTO_DIRECTO_MATERIALES_A_PROCESO')}
+        current_changes_filtered = {k: v for k, v in current_changes.items() if not k.startswith('sim_COSTO_DIRECTO_MATERIALES_A_PROCESO')}
 
         st.session_state['saved_scenarios'][scenario_name] = current_changes_filtered
         save_scenarios_to_file()
         st.success(f"Escenario '{scenario_name}' guardado exitosamente.")
-        st.session_state.new_scenario_name_input = ""  # Clear input after saving
+        st.session_state.new_scenario_name_input = "" # Clear input after saving
     else:
         st.warning("Por favor, introduce un nombre para el escenario.")
-
 
 def load_scenario_callback():
     """Callback to load a named scenario into the current simulation state."""
@@ -1023,16 +1015,15 @@ def load_scenario_callback():
         # Apply the loaded changes
         for key, value in loaded_changes.items():
             st.session_state[key] = value
-
+        
         # Also reset adjustment flags if they were part of the saved state, or just reset them
         st.session_state['ajuste_activo'] = False
-        st.session_state['porcentaje_ajuste'] = 45  # Default value
-
+        st.session_state['porcentaje_ajuste'] = 45 # Default value
+        
         st.success(f"Escenario '{scenario_name}' cargado exitosamente.")
         # No st.rerun() needed here as Streamlit will rerun after the callback finishes.
     elif scenario_name:
         st.error(f"Escenario '{scenario_name}' no encontrado.")
-
 
 def delete_scenario_callback():
     """Callback to delete a named scenario."""
@@ -1044,7 +1035,6 @@ def delete_scenario_callback():
         # No st.rerun() needed here as Streamlit will rerun after the callback finishes.
     elif scenario_name:
         st.error(f"Escenario '{scenario_name}' no encontrado.")
-
 
 def reset_simulator_callback():
     """Callback to reset all simulation values."""
@@ -1063,7 +1053,6 @@ def reset_simulator_callback():
         del st.session_state['informe_ia']
     # No st.rerun() needed here.
 
-
 def simulate_plus_10_percent_sales_callback():
     """Callback to simulate +10% in national sales."""
     estructura = get_cached_structure()
@@ -1075,7 +1064,6 @@ def simulate_plus_10_percent_sales_callback():
     st.session_state['sim_VENTAS_BRUTAS_NACIONAL_16%_MAYOREO'] = mayoreo_actual * 0.10
     st.session_state['sim_VENTAS_BRUTAS_NACIONAL_16%_CATALOGO'] = catalogo_actual * 0.10
     # No st.rerun() needed here.
-
 
 # --- INTERFAZ DE USUARIO ---
 st.title('📊 Simulador Financiero Jerárquico')
@@ -1089,6 +1077,7 @@ st.caption(
 if 'initial_load_done' not in st.session_state:
     inicializar_simulaciones()
     st.session_state['initial_load_done'] = True
+
 
 # --- SIDEBAR CON CONTROLES JERÁRQUICOS ---
 with st.sidebar:
@@ -1105,19 +1094,15 @@ with st.sidebar:
 
     # Cargar Escenario
     if scenario_names:
-        selected_scenario_load = st.selectbox("Seleccionar escenario para cargar:", [""] + scenario_names,
-                                              key="load_scenario_selectbox")
-        st.button("Cargar Escenario", use_container_width=True, disabled=(selected_scenario_load == ""),
-                  on_click=load_scenario_callback)
+        selected_scenario_load = st.selectbox("Seleccionar escenario para cargar:", [""] + scenario_names, key="load_scenario_selectbox")
+        st.button("Cargar Escenario", use_container_width=True, disabled=(selected_scenario_load == ""), on_click=load_scenario_callback)
     else:
         st.info("No hay escenarios guardados.")
 
     # Eliminar Escenario
     if scenario_names:
-        selected_scenario_delete = st.selectbox("Seleccionar escenario para eliminar:", [""] + scenario_names,
-                                                key="delete_scenario_selectbox")
-        st.button("Eliminar Escenario", use_container_width=True, disabled=(selected_scenario_delete == ""),
-                  on_click=delete_scenario_callback)
+        selected_scenario_delete = st.selectbox("Seleccionar escenario para eliminar:", [""] + scenario_names, key="delete_scenario_selectbox")
+        st.button("Eliminar Escenario", use_container_width=True, disabled=(selected_scenario_delete == ""), on_click=delete_scenario_callback)
 
     st.markdown("---")
     st.subheader("📦 Ajuste Automático de Costos")
@@ -1149,7 +1134,7 @@ with st.sidebar:
     # Función auxiliar para mostrar el valor actual, cambio y porcentaje de cambio debajo de cada input
     def display_number_input_info_with_actual_meta_brecha(key, actual_val, meta_val, is_auto_adjusted=False):
         current_change = st.session_state.get(key, 0.0)
-
+        
         # Calculate percentage change for 'Cambio'
         percentage_change_sim = 0.0
         if actual_val != 0:
@@ -1158,17 +1143,17 @@ with st.sidebar:
             percentage_change_sim = float('inf') if current_change > 0 else float('-inf')
 
         # Calculate brecha vs Meta
-        simulated_val_for_brecha = actual_val + current_change  # This is the effective simulated value
+        simulated_val_for_brecha = actual_val + current_change # This is the effective simulated value
         brecha_vs_meta = simulated_val_for_brecha - meta_val
         brecha_vs_meta_percent = 0.0
         if meta_val != 0:
             brecha_vs_meta_percent = (brecha_vs_meta / meta_val) * 100
         elif brecha_vs_meta != 0:
             brecha_vs_meta_percent = float('inf') if brecha_vs_meta > 0 else float('-inf')
-
+        
         # Display the info using markdown with inline styles for smaller font
         st.markdown(
-            f'<div class="small-input-info">'  # Custom class for styling
+            f'<div class="small-input-info">' # Custom class for styling
             f'<p><b>Actual:</b> ${actual_val:,.0f} | '
             f'<b>Meta:</b> ${meta_val:,.0f} | '
             f'<b>Brecha vs Meta:</b> {brecha_vs_meta_percent:+.1f}%</p>'
@@ -1238,7 +1223,8 @@ with st.sidebar:
                         cambio_ventas_brutas_nacional = 0
                         for canal_vn in ['RETAIL', 'CATALOGO', 'MAYOREO']:
                             key_ventas_nacional = f"sim_VENTAS_BRUTAS_NACIONAL_16%_{canal_vn}"
-                            cambio_ventas_brutas_nacional += st.session_state.get(key_ventas_nacional, 0.0)
+                            # Only add positive changes to the materials adjustment calculation
+                            cambio_ventas_brutas_nacional += max(0, st.session_state.get(key_ventas_nacional, 0.0))
 
                         porcentaje_ajuste_val = st.session_state.get('porcentaje_ajuste', 45)
                         ajuste_automatico_para_display = (porcentaje_ajuste_val / 100) * cambio_ventas_brutas_nacional
@@ -1253,8 +1239,7 @@ with st.sidebar:
                                         help="Este valor se ajusta automáticamente según el 'Ajuste Automático de Costos'."
                                         )
                         # Displaying combined info for auto-adjusted field
-                        display_number_input_info_with_actual_meta_brecha(key, actual_val, meta_val,
-                                                                          is_auto_adjusted=True)
+                        display_number_input_info_with_actual_meta_brecha(key, actual_val, meta_val, is_auto_adjusted=True)
                     else:
                         st.number_input(f"{item.replace('_', ' ').title()}", min_value=min_val, max_value=max_val,
                                         value=st.session_state.get(key, 0.0), step=1000.0, key=key)
@@ -1368,16 +1353,18 @@ with st.sidebar:
     with col1_scenario:
         # Botón para refrescar el simulador y resetear todos los valores
         st.button("🔄 Refrescar Simulador", use_container_width=True,
-                  help="Restablece todos los simuladores a cero.", on_click=reset_simulator_callback)
+                     help="Restablece todos los simuladores a cero.", on_click=reset_simulator_callback)
 
     with col2_scenario:
         # Botón para simular un aumento del 10% en ventas nacionales específicas
         st.button("📈 Simular +10% en Ventas Nacionales", use_container_width=True,
-                  help="Aumenta en un 10% del valor actual las ventas nacionales de Retail, Catálogo y Mayoreo",
-                  on_click=simulate_plus_10_percent_sales_callback)
+                     help="Aumenta en un 10% del valor actual las ventas nacionales de Retail, Catálogo y Mayoreo", on_click=simulate_plus_10_percent_sales_callback)
+
 
 # --- CONTENIDO PRINCIPAL ---
-# Obtener cambios actuales de todos los simuladores manuales
+
+# Obtener cambios actuales de todos los simuladores manuales.
+# ESTA PARTE FUE MOVIDA AQUÍ ARRIBA para asegurar que 'changes' SIEMPRE esté definido.
 changes = {key: value for key, value in st.session_state.items() if key.startswith('sim_')}
 
 # Lógica CLAVE para el ajuste automático de costos: se aplica ANTES de generar el dataframe
@@ -1385,10 +1372,11 @@ key_materiales_proceso = 'sim_COSTO_DIRECTO_MATERIALES_A_PROCESO'
 if st.session_state.get('ajuste_activo', False):
     # Si el ajuste automático está activo, calcula y aplica el ajuste
     cambio_ventas_brutas_nacional = 0
-    # Sumar los cambios de los inputs de ventas nacionales (Retail, Catalogo, Mayoreo)
+    # Sumar solo los cambios POSITIVOS de los inputs de ventas nacionales (Retail, Catalogo, Mayoreo)
     for canal in ['RETAIL', 'CATALOGO', 'MAYOREO']:
         key_ventas_nacional = f"sim_VENTAS_BRUTAS_NACIONAL_16%_{canal}"
-        cambio_ventas_brutas_nacional += st.session_state.get(key_ventas_nacional, 0.0)
+        # Use max(0, value) to ensure only positive changes contribute
+        cambio_ventas_brutas_nacional += max(0, st.session_state.get(key_ventas_nacional, 0.0))
 
     porcentaje_ajuste = st.session_state.get('porcentaje_ajuste', 45)
     ajuste_materiales = (porcentaje_ajuste / 100) * cambio_ventas_brutas_nacional
@@ -1397,6 +1385,7 @@ else:
     # If the automatic adjustment is NOT active, ensure the change for "Materiales A Proceso" is 0.0
     # This prevents its value from persisting if the user turns off the adjustment.
     changes[key_materiales_proceso] = 0.0
+
 
 # Generar dataframe con los cambios actualizados
 df_completo = generar_dataframe_completo(changes)
@@ -1443,10 +1432,8 @@ with tab1:
                 delta_color="normal")
 
     st.subheader("Análisis Comparativo Detallado")
-
-    # Crear df_display with the desired column order. Removed mobile_view_checkbox logic.
-    # The columns are explicitly ordered here to ensure '% Sim. vs VN' is next to 'Simulado'
-    # and '% Meta vs VN' is next to 'Meta'.
+    
+    # Crear df_display with the desired column order.
     df_display = df_completo[[
         'Cuenta', 'Actual', 'Simulado', 'Simulado (% VN)', 'Meta', 'Meta (% VN)', 'Brecha vs Meta (%)'
     ]].copy()
@@ -1467,16 +1454,15 @@ with tab1:
     }
 
     # Calculate height needed for all rows
-    # Assuming approximately 34 pixels per row (this can vary slightly with styling)
     row_height = 34
-    header_height = 38  # Approximate height of the header row
+    header_height = 38 
     total_rows = len(df_display)
-    desired_height = (total_rows * row_height) + header_height + 5  # Add a little extra padding
+    desired_height = (total_rows * row_height) + header_height + 5 # Added a bit extra padding
 
     st.dataframe(
-        aplicar_estilo_financiero(df_display).format(formatos),  # df_display already has the desired order
+        aplicar_estilo_financiero(df_display).format(formatos), 
         use_container_width=True,
-        height=desired_height  # Set the height to show all rows
+        height=desired_height 
     )
 
     # Botón para obtener recomendaciones de IA sobre variables clave
@@ -1507,6 +1493,7 @@ with tab1:
         st.info(
             "🔍 **No hay variables modificadas.** Usa los controles del panel lateral para simular diferentes escenarios."
         )
+
 
 # --- TAB 2: ANÁLISIS VISUAL E IA ---
 with tab2:
@@ -1561,7 +1548,7 @@ with tab2:
             legend_y=-0.2
         )
         st.plotly_chart(fig_pie, use_container_width=True, key="pie_chart")
-
+    
     st.markdown("---")
     st.header("🤖 IA: Análisis Estratégico (Actual vs. Meta vs. Simulación)")
     st.info(
