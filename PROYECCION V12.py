@@ -1,10 +1,12 @@
-import pandas as pd
+import pandas as pd  # <-- Asegurar esta importación al inicio
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 import google.generativeai as genai
 import json
 import os
+import numpy as np
+from openpyxl import load_workbook
 
 # --- CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="Simulador Financiero Jerárquico PORTAWARE", layout="wide",
@@ -93,95 +95,55 @@ PALETA_GRAFICOS = {
     'Neutro': '#6C757D'  # Gris neutro
 }
 
-# --- FUNCIÓN PARA LEER DATOS DEL EXCEL (Ahora solo para valores ACTUALES, META va hardcodeado) ---
-# NOTE: The original code had a hardcoded path for an Excel file.
-# Since this path is specific to your local machine and not portable for others running the app,
-# I've commented out the `excel_file_path` and `excel_sheet_name` as they are not directly used in the provided
-# `read_excel_value` function's logic, which now relies entirely on `excel_data_placeholder`.
-# If you intend to actually read from an Excel file dynamically, this part would need to be re-evaluated
-# to handle file uploads or relative paths in a deployed environment.
-# excel_file_path = r"C:\Users\ROBERTO LOPEZ\OneDrive - Porta\Documentos\Analisis Financiero\01 Finanzas\Modelo PL ABRIL 2025 220525_V6.xlsx"
-# excel_sheet_name = "PY"
-
-# Diccionario de valores ACTUALES leídos del Excel (o hardcodeados como si lo fueran)
-# Estos son los valores ACTUALES que se utilizarán para la inicialización y comparación.
-excel_data_placeholder = {
-    # Ventas Brutas y relacionados (ACTUALES)
-    'I3': 166049695 + 396959,  # RETAIL - ADJUSTED to make Ventas Brutas sum to 220,422,915
-    'I4': 7040305,  # CATALOGO
-    'I5': 40598491,  # MAYOREO
-    'I6': 5988291,  # RETAIL (Extranjero)
-    'I7': 349174,  # CATALOGO (Extranjero)
-    'I8': 0,  # MAYOREO (Extranjero) - empty in image, assuming 0
-    'I9': 15165797,  # DESCUENTOS
-    'I10': -7071,  # OTROS INGRESOS (ACTUAL)
-
-    # Costos (ACTUALES)
-    'I13': 101529704,  # MATERIALES A PROCESO
-    'I14': 2834923,  # MANO DE OBRA ARMADO
-    'I15': 124244,  # COSTOS DE CALIDAD
-    'I16': 213500,  # COSTOS DE MOLDES
-    'I17': 75250,  # OTROS COSTOS
-
-    # Gastos Operativos (ACTUALES)
-    'I20': 20353768.00,  # SUELDOS Y SALARIOS
-    'I21': 983718.38,  # PRESTACIONES
-    'I22': 55900.69,  # OTRAS COMPENSACIONES
-    'I23': 106123.47,  # SEGURIDAD E HIGIENE
-    'I24': 393089.07,  # GASTOS DE PERSONAL
-    'I25': 288560.20,  # COMBUSTIBLE
-    'I26': 106077.63,  # ESTACIONAMIENTO
-    'I27': 113034.14,  # TRANSPORTE LOCAL
-    'I28': 377221.99,  # GASTOS DE VIAJE
-    'I29': 765992.62,  # ASESORIAS PM
-    'I30': 36429.03,  # SEGURIDAD Y VIGILANCIA
-    'I31': 232637.97,  # SERVICIOS INSTALACIONES
-    'I32': 121311.77,  # CELULARES
-    'I33': 125597.32,  # SUMINISTROS GENERALES
-    'I34': 59630.37,  # SUMINISTROS OFICINA
-    'I35': 70987.01,  # SUMINISTROS COMPUTO
-    'I36': 6252580.18,  # ARRENDAMIENTOS
-    'I37': 506511.47,  # MANTENIMIENTOS
-    'I38': 29166.67,  # INVENTARIO FÍSICO
-    'I39': 10059.88,  # OTROS IMPUESTOS Y DERECHOS
-    'I40': 50606.86,  # NO DEDUCIBLES
-    'I41': 185402.26,  # SEGUROS Y FIANZAS
-    'I42': 87100.29,  # CAPACITACION Y ENTRENAMIENTO
-    'I43': 103218.48,  # MENSAJERIA
-    'I44': 13300.00,  # MUESTRAS
-    'I45': 25000.00,  # FERIAS Y EXPOSICIONES
-    'I46': 40768.88,  # PUBLICIDAD IMPRESA
-    'I47': 306200.00,  # IMPRESIONES 3D
-    'I48': 10500.00,  # MATERIAL DISEÑO
-    'I49': 15224.64,  # PATENTES
-    'I50': 404232.35,  # LICENCIAS Y SOFTWARE
-    'I51': 2099.13,  # ATENCION A CLIENTES
-    'I52': 233197.83,  # ASESORIAS PF
-    'I53': 89033.16,  # PORTALES CLIENTES
-    'I54': 72103.54,  # CUOTAS Y SUSCRIPCIONES
-    'I55': 8515255.39,  # FLETES EXTERNOS
-    'I56': 445259.00,  # FLETES INTERNOS
-    'I57': 390546.40,  # IMPTOS S/NOMINA
-    'I58': 2284361.83,  # CONTRIBUCIONES PATRONALES
-    'I59': 2304.41,  # TIMBRES Y FOLIOS FISCALES
-    'I60': 1412.00,  # COMISION MERCANTIL
-    'I61': 174732.17,  # GASTOS ADUANALES
-
-    # Otros Gastos y Financieros (ACTUALES)
-    'I63': 3074561.44,  # TOTAL DE OTROS GASTOS
-    'I66': 726424.45,  # GASTOS FINANCIEROS (Actual de la imagen)
-    'I67': 30800.00,  # PRODUCTOS FINANCIEROS (Actual de la imagen)
-    'I68': 572676.20,  # RESULTADO CAMBIARIO (Actual de la imagen)
-}
+# --- CONFIGURACIÓN EXCEL DINÁMICA ---
+EXCEL_PATH = r"C:\Users\ROBERTO LOPEZ\OneDrive - Porta\Documentos\Analisis Financiero\01 Finanzas\PY FINANCIERO V2.xlsx"
+SHEET_NAME = "PY"
 
 
-def read_excel_value(cell_reference: str):
-    """
-    Simula la lectura de un valor de una celda de Excel.
-    Ahora solo se usa para valores ACTUALES, ya que META se define directamente.
-    """
-    return excel_data_placeholder.get(cell_reference, 0)
+def cargar_excel():
+    """Carga el archivo Excel y lo almacena en session_state"""
+    try:
+        # Usamos openpyxl para mantener fórmulas actualizadas
+        wb = load_workbook(EXCEL_PATH, data_only=True)
+        sheet = wb[SHEET_NAME]
 
+        # Convertir hoja a DataFrame
+        data = sheet.values
+        cols = next(data)
+        df = pd.DataFrame(data, columns=cols)  # <-- Ahora pd está definido
+
+        # Almacenar en session_state
+        st.session_state.excel_data = df
+        st.session_state.last_modified = os.path.getmtime(EXCEL_PATH)
+        return True
+    except Exception as e:
+        st.error(f"Error al cargar Excel: {str(e)}")
+        return False
+
+
+def obtener_valor_celda(cell_ref):
+    """Obtiene el valor de una celda usando referencia Excel (ej: 'B2')"""
+    if 'excel_data' not in st.session_state:
+        if not cargar_excel():
+            return 0.0
+
+    # Convertir referencia de celda a coordenadas
+    col_letter = cell_ref[0]
+    row_num = int(cell_ref[1:]) - 1  # -1 porque las filas empiezan en 0
+
+    # Convertir letra a índice de columna
+    col_num = ord(col_letter) - ord('A')
+
+    try:
+        # Obtener valor de la celda
+        return st.session_state.excel_data.iloc[row_num, col_num]
+    except:
+        return 0.0
+
+
+# --- INICIALIZAR DATOS EXCEL ---
+if 'excel_data' not in st.session_state:
+    cargar_excel()
 
 # --- VALORES META HARDCODEADOS ---
 # Consolidados según la solicitud del usuario y las imágenes
@@ -275,26 +237,26 @@ def obtener_estructura_cuentas():
 
     # Mapeo de celdas para gastos operativos (used for actual values)
     gastos_operativos_map_cells = {
-        'SUELDOS Y SALARIOS': 'I20', 'PRESTACIONES': 'I21', 'OTRAS COMPENSACIONES': 'I22',
-        'SEGURIDAD E HIGIENE': 'I23', 'GASTOS DE PERSONAL': 'I24', 'COMBUSTIBLE': 'I25',
-        'ESTACIONAMIENTO': 'I26', 'TRANSPORTE LOCAL': 'I27', 'GASTOS DE VIAJE': 'I28',
-        'ASESORIAS PM': 'I29', 'SEGURIDAD Y VIGILANCIA': 'I30', 'SERVICIOS INSTALACIONES': 'I31',
-        'CELULARES': 'I32', 'SUMINISTROS GENERALES': 'I33', 'SUMINISTROS OFICINA': 'I34',
-        'SUMINISTROS COMPUTO': 'I35', 'ARRENDAMIENTOS': 'I36', 'MANTENIMIENTOS': 'I37',
-        'INVENTARIO FÍSICO': 'I38', 'OTROS IMPUESTOS Y DERECHOS': 'I39', 'NO DEDUCIBLES': 'I40',
-        'SEGUROS Y FIANZAS': 'I41', 'CAPACITACION Y ENTRENAMIENTO': 'I42', 'MENSAJERIA': 'I43',
-        'MUESTRAS': 'I44', 'FERIAS Y EXPOSICIONES': 'I45', 'PUBLICIDAD IMPRESA': 'I46',
-        'IMPRESIONES 3D': 'I47', 'MATERIAL DISEÑO': 'I48', 'PATENTES': 'I49',
-        'LICENCIAS Y SOFTWARE': 'I50', 'ATENCION A CLIENTES': 'I51', 'ASESORIAS PF': 'I52',
-        'PORTALES CLIENTES': 'I53', 'CUOTAS Y SUSCRIPCIONES': 'I54', 'FLETES EXTERNOS': 'I55',
-        'FLETES INTERNOS': 'I56', 'IMPTOS S/NOMINA': 'I57', 'CONTRIBUCIONES PATRONALES': 'I58',
-        'TIMBRES Y FOLIOS FISCALES': 'I59', 'COMISION MERCANTIL': 'I60', 'GASTOS ADUANALES': 'I61'
+        'SUELDOS Y SALARIOS': 'I19', 'PRESTACIONES': 'I20', 'OTRAS COMPENSACIONES': 'I21',
+        'SEGURIDAD E HIGIENE': 'I22', 'GASTOS DE PERSONAL': 'I23', 'COMBUSTIBLE': 'I24',
+        'ESTACIONAMIENTO': 'I25', 'TRANSPORTE LOCAL': 'I26', 'GASTOS DE VIAJE': 'I27',
+        'ASESORIAS PM': 'I28', 'SEGURIDAD Y VIGILANCIA': 'I29', 'SERVICIOS INSTALACIONES': 'I30',
+        'CELULARES': 'I31', 'SUMINISTROS GENERALES': 'I32', 'SUMINISTROS OFICINA': 'I33',
+        'SUMINISTROS COMPUTO': 'I34', 'ARRENDAMIENTOS': 'I35', 'MANTENIMIENTOS': 'I36',
+        'INVENTARIO FÍSICO': 'I37', 'OTROS IMPUESTOS Y DERECHOS': 'I38', 'NO DEDUCIBLES': 'I39',
+        'SEGUROS Y FIANZAS': 'I40', 'CAPACITACION Y ENTRENAMIENTO': 'I41', 'MENSAJERIA': 'I42',
+        'MUESTRAS': 'I43', 'FERIAS Y EXPOSICIONES': 'I44', 'PUBLICIDAD IMPRESA': 'I45',
+        'IMPRESIONES 3D': 'I46', 'MATERIAL DISEÑO': 'I47', 'PATENTES': 'I48',
+        'LICENCIAS Y SOFTWARE': 'I49', 'ATENCION A CLIENTES': 'I50', 'ASESORIAS PF': 'I51',
+        'PORTALES CLIENTES': 'I52', 'CUOTAS Y SUSCRIPCIONES': 'I53', 'FLETES EXTERNOS': 'I54',
+        'FLETES INTERNOS': 'I55', 'IMPTOS S/NOMINA': 'I56', 'CONTRIBUCIONES PATRONALES': 'I57',
+        'TIMBRES Y FOLIOS FISCALES': 'I58', 'COMISION MERCANTIL': 'I59', 'GASTOS ADUANALES': 'I60'
     }
 
     gastos_operativos_subcuentas = {}
     for gasto, cell in gastos_operativos_map_cells.items():
         gastos_operativos_subcuentas[gasto] = {
-            'actual': read_excel_value(cell),
+            'actual': obtener_valor_celda(cell),
             'meta': META_VALUES['GASTOS_OPERATIVOS_INDIVIDUALES'].get(gasto, 0),
             'simulable': True
         }
@@ -306,24 +268,24 @@ def obtener_estructura_cuentas():
             'componentes': ['VENTAS BRUTAS NACIONAL 16%', 'VENTAS BRUTAS EXTRANJERO'],
             'subcuentas': {
                 'VENTAS BRUTAS NACIONAL 16%': {
-                    'RETAIL': {'actual': read_excel_value('I3'),
+                    'RETAIL': {'actual': obtener_valor_celda('I2'),
                                'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['RETAIL'],
                                'simulable': True},
-                    'CATALOGO': {'actual': read_excel_value('I4'),
+                    'CATALOGO': {'actual': obtener_valor_celda('I3'),
                                  'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['CATALOGO'],
                                  'simulable': True},
-                    'MAYOREO': {'actual': read_excel_value('I5'),
+                    'MAYOREO': {'actual': obtener_valor_celda('I4'),
                                 'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['MAYOREO'],
                                 'simulable': True}
                 },
                 'VENTAS BRUTAS EXTRANJERO': {
-                    'RETAIL': {'actual': read_excel_value('I6'),
+                    'RETAIL': {'actual': obtener_valor_celda('I5'),
                                'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['RETAIL'],
                                'simulable': True},
-                    'CATALOGO': {'actual': read_excel_value('I7'),
+                    'CATALOGO': {'actual': obtener_valor_celda('I6'),
                                  'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['CATALOGO'],
                                  'simulable': True},
-                    'MAYOREO': {'actual': read_excel_value('I8'),
+                    'MAYOREO': {'actual': obtener_valor_celda('I7'),
                                 'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['MAYOREO'],
                                 'simulable': True}
                 }
@@ -331,10 +293,10 @@ def obtener_estructura_cuentas():
         },
 
         # Nivel 5 - DESCUENTOS Y OTROS (DESCUENTOS son una reducción de ingresos, OTROS INGRESOS es un ingreso)
-        'DESCUENTOS': {'jerarquia': '5', 'tipo': 'simple', 'actual': read_excel_value('I9'),
+        'DESCUENTOS': {'jerarquia': '5', 'tipo': 'simple', 'actual': obtener_valor_celda('I8'),
                        'meta': META_VALUES['DESCUENTOS'],
                        'simulable': True},
-        'OTROS INGRESOS': {'jerarquia': '5.3', 'tipo': 'simple', 'actual': read_excel_value('I10'),
+        'OTROS INGRESOS': {'jerarquia': '5.3', 'tipo': 'simple', 'actual': obtener_valor_celda('I9'),
                            'meta': META_VALUES['OTROS INGRESOS'],
                            'simulable': True},
 
@@ -347,23 +309,23 @@ def obtener_estructura_cuentas():
             'componentes': ['COSTO DIRECTO', 'COSTO INDIRECTO', 'OTROS COSTOS'],
             'subcuentas': {
                 'COSTO DIRECTO': {
-                    'MATERIALES A PROCESO': {'actual': read_excel_value('I13'),
+                    'MATERIALES A PROCESO': {'actual': obtener_valor_celda('I12'),
                                              'meta': META_VALUES['COSTO']['COSTO DIRECTO']['MATERIALES A PROCESO'],
                                              'simulable': True},
-                    'MANO DE OBRA ARMADO': {'actual': read_excel_value('I14'),
+                    'MANO DE OBRA ARMADO': {'actual': obtener_valor_celda('I13'),
                                             'meta': META_VALUES['COSTO']['COSTO DIRECTO']['MANO DE OBRA ARMADO'],
                                             'simulable': True}
                 },
                 'COSTO INDIRECTO': {
-                    'COSTOS DE CALIDAD': {'actual': read_excel_value('I15'),
+                    'COSTOS DE CALIDAD': {'actual': obtener_valor_celda('I14'),
                                           'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE CALIDAD'],
                                           'simulable': True},
-                    'COSTOS DE MOLDES': {'actual': read_excel_value('I16'),
+                    'COSTOS DE MOLDES': {'actual': obtener_valor_celda('I15'),
                                          'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE MOLDES'],
                                          'simulable': True}
                 },
                 'OTROS COSTOS': {
-                    'OTROS COSTOS': {'actual': read_excel_value('I17'), 'meta': META_VALUES['COSTO']['OTROS COSTOS'],
+                    'OTROS COSTOS': {'actual': obtener_valor_celda('I16'), 'meta': META_VALUES['COSTO']['OTROS COSTOS'],
                                      'simulable': True}}
             }
         },
@@ -380,7 +342,7 @@ def obtener_estructura_cuentas():
         # Resto de la estructura
         'EBITDA OPERATIVA': {'jerarquia': '10', 'tipo': 'formula',
                              'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
-        'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': read_excel_value('I63'),
+        'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': obtener_valor_celda('I62'),
                                   'meta': META_VALUES['TOTAL DE OTROS GASTOS'],
                                   'simulable': True},
         'EBITDA': {'jerarquia': '12', 'tipo': 'formula', 'formula': 'EBITDA OPERATIVA - TOTAL DE OTROS GASTOS'},
@@ -389,13 +351,13 @@ def obtener_estructura_cuentas():
             'componentes': ['GASTOS FINANCIEROS', 'PRODUCTOS FINANCIEROS', 'RESULTADO CAMBIARIO'],
             'subcuentas': {
                 # Valores tomados directamente de la imagen para 'meta' y 'actual'
-                'GASTOS FINANCIEROS': {'actual': read_excel_value('I66'),
+                'GASTOS FINANCIEROS': {'actual': obtener_valor_celda('I65'),
                                        'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['GASTOS FINANCIEROS'],
                                        'simulable': True},
-                'PRODUCTOS FINANCIEROS': {'actual': read_excel_value('I67'),
+                'PRODUCTOS FINANCIEROS': {'actual': obtener_valor_celda('I66'),
                                           'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['PRODUCTOS FINANCIEROS'],
                                           'simulable': True},
-                'RESULTADO CAMBIARIO': {'actual': read_excel_value('I68'),
+                'RESULTADO CAMBIARIO': {'actual': obtener_valor_celda('I67'),
                                         'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['RESULTADO CAMBIARIO'],
                                         'simulable': True}
             }
@@ -1082,6 +1044,15 @@ st.caption(
     "Simulación detallada con estructura de subcuentas. "
     f"Estado de IA: {'✅ Conectada' if GEMINI_AVAILABLE else '❌ No disponible'}"
 )
+
+# Botón para recargar Excel
+if st.sidebar.button("🔄 Recargar Datos desde Excel", use_container_width=True):
+    if cargar_excel():
+        st.sidebar.success("¡Datos actualizados desde Excel!")
+        # Limpiar caché para forzar recálculo
+        st.cache_data.clear()
+    else:
+        st.sidebar.error("Error al actualizar datos")
 
 # Inicializa el estado de las simulaciones y carga escenarios al inicio
 # This should only be called once, at the very beginning of the script execution.
