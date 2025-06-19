@@ -259,11 +259,11 @@ def obtener_estructura_cuentas():
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['RETAIL'],
                         'simulable': True},
                     'CATALOGO': {
-                        'actual': get_cell_value('I3'),
+                        'actual': get_cell_value('I4'),
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['CATALOGO'],
                         'simulable': True},
                     'MAYOREO': {
-                        'actual': get_cell_value('I4'),
+                        'actual': get_cell_value('I3'),
                         'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['MAYOREO'],
                         'simulable': True}
                 },
