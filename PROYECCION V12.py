@@ -226,20 +226,20 @@ def obtener_estructura_cuentas():
     """Retorna la estructura completa de cuentas con jerarquía para PORTAWARE."""
     # Mapeo de celdas para gastos operativos
     gastos_operativos_map_cells = {
-        'SUELDOS Y SALARIOS': 'I20', 'PRESTACIONES': 'I21', 'OTRAS COMPENSACIONES': 'I22',
-        'SEGURIDAD E HIGIENE': 'I23', 'GASTOS DE PERSONAL': 'I24', 'COMBUSTIBLE': 'I25',
-        'ESTACIONAMIENTO': 'I26', 'TRANSPORTE LOCAL': 'I27', 'GASTOS DE VIAJE': 'I28',
-        'ASESORIAS PM': 'I29', 'SEGURIDAD Y VIGILANCIA': 'I30', 'SERVICIOS INSTALACIONES': 'I31',
-        'CELULARES': 'I32', 'SUMINISTROS GENERALES': 'I33', 'SUMINISTROS OFICINA': 'I34',
-        'SUMINISTROS COMPUTO': 'I35', 'ARRENDAMIENTOS': 'I36', 'MANTENIMIENTOS': 'I37',
-        'INVENTARIO FÍSICO': 'I38', 'OTROS IMPUESTOS Y DERECHOS': 'I39', 'NO DEDUCIBLES': 'I40',
-        'SEGUROS Y FIANZAS': 'I41', 'CAPACITACION Y ENTRENAMIENTO': 'I42', 'MENSAJERIA': 'I43',
-        'MUESTRAS': 'I44', 'FERIAS Y EXPOSICIONES': 'I45', 'PUBLICIDAD IMPRESA': 'I46',
-        'IMPRESIONES 3D': 'I47', 'MATERIAL DISEÑO': 'I48', 'PATENTES': 'I49',
-        'LICENCIAS Y SOFTWARE': 'I50', 'ATENCION A CLIENTES': 'I51', 'ASESORIAS PF': 'I52',
-        'PORTALES CLIENTES': 'I53', 'CUOTAS Y SUSCRIPCIONES': 'I54', 'FLETES EXTERNOS': 'I55',
-        'FLETES INTERNOS': 'I56', 'IMPTOS S/NOMINA': 'I57', 'CONTRIBUCIONES PATRONALES': 'I58',
-        'TIMBRES Y FOLIOS FISCALES': 'I59', 'COMISION MERCANTIL': 'I60', 'GASTOS ADUANALES': 'I61'
+        'SUELDOS Y SALARIOS': 'I19', 'PRESTACIONES': 'I20', 'OTRAS COMPENSACIONES': 'I21',
+        'SEGURIDAD E HIGIENE': 'I22', 'GASTOS DE PERSONAL': 'I23', 'COMBUSTIBLE': 'I24',
+        'ESTACIONAMIENTO': 'I25', 'TRANSPORTE LOCAL': 'I26', 'GASTOS DE VIAJE': 'I27',
+        'ASESORIAS PM': 'I28', 'SEGURIDAD Y VIGILANCIA': 'I29', 'SERVICIOS INSTALACIONES': 'I30',
+        'CELULARES': 'I31', 'SUMINISTROS GENERALES': 'I32', 'SUMINISTROS OFICINA': 'I33',
+        'SUMINISTROS COMPUTO': 'I34', 'ARRENDAMIENTOS': 'I35', 'MANTENIMIENTOS': 'I36',
+        'INVENTARIO FÍSICO': 'I37', 'OTROS IMPUESTOS Y DERECHOS': 'I38', 'NO DEDUCIBLES': 'I39',
+        'SEGUROS Y FIANZAS': 'I40', 'CAPACITACION Y ENTRENAMIENTO': 'I41', 'MENSAJERIA': 'I42',
+        'MUESTRAS': 'I43', 'FERIAS Y EXPOSICIONES': 'I44', 'PUBLICIDAD IMPRESA': 'I45',
+        'IMPRESIONES 3D': 'I46', 'MATERIAL DISEÑO': 'I47', 'PATENTES': 'I48',
+        'LICENCIAS Y SOFTWARE': 'I49', 'ATENCION A CLIENTES': 'I50', 'ASESORIAS PF': 'I51',
+        'PORTALES CLIENTES': 'I52', 'CUOTAS Y SUSCRIPCIONES': 'I53', 'FLETES EXTERNOS': 'I54',
+        'FLETES INTERNOS': 'I55', 'IMPTOS S/NOMINA': 'I56', 'CONTRIBUCIONES PATRONALES': 'I57',
+        'TIMBRES Y FOLIOS FISCALES': 'I58', 'COMISION MERCANTIL': 'I59', 'GASTOS ADUANALES': 'I60'
     }
 
     gastos_operativos_subcuentas = {}
@@ -257,24 +257,24 @@ def obtener_estructura_cuentas():
             'componentes': ['VENTAS BRUTAS NACIONAL 16%', 'VENTAS BRUTAS EXTRANJERO'],
             'subcuentas': {
                 'VENTAS BRUTAS NACIONAL 16%': {
-                    'RETAIL': {'actual': obtener_valor_celda('I3'),
+                    'RETAIL': {'actual': obtener_valor_celda('I2'),
                                'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['RETAIL'],
                                'simulable': True},
-                    'CATALOGO': {'actual': obtener_valor_celda('I4'),
+                    'CATALOGO': {'actual': obtener_valor_celda('I3'),
                                  'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['CATALOGO'],
                                  'simulable': True},
-                    'MAYOREO': {'actual': obtener_valor_celda('I5'),
+                    'MAYOREO': {'actual': obtener_valor_celda('I4'),
                                  'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['MAYOREO'],
                                  'simulable': True}
                 },
                 'VENTAS BRUTAS EXTRANJERO': {
-                    'RETAIL': {'actual': obtener_valor_celda('I6'),
+                    'RETAIL': {'actual': obtener_valor_celda('I5'),
                                'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['RETAIL'],
                                'simulable': True},
-                    'CATALOGO': {'actual': obtener_valor_celda('I7'),
+                    'CATALOGO': {'actual': obtener_valor_celda('I6'),
                                  'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['CATALOGO'],
                                  'simulable': True},
-                    'MAYOREO': {'actual': obtener_valor_celda('I8'),
+                    'MAYOREO': {'actual': obtener_valor_celda('I7'),
                                  'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['MAYOREO'],
                                  'simulable': True}
                 }
@@ -282,10 +282,10 @@ def obtener_estructura_cuentas():
         },
 
         # Nivel 5 - DESCUENTOS Y OTROS (DESCUENTOS son una reducción de ingresos, OTROS INGRESOS es un ingreso)
-        'DESCUENTOS': {'jerarquia': '5', 'tipo': 'simple', 'actual': obtener_valor_celda('I9'),
+        'DESCUENTOS': {'jerarquia': '5', 'tipo': 'simple', 'actual': obtener_valor_celda('I8'),
                        'meta': META_VALUES['DESCUENTOS'],
                        'simulable': True},
-        'OTROS INGRESOS': {'jerarquia': '5.3', 'tipo': 'simple', 'actual': obtener_valor_celda('I10'),
+        'OTROS INGRESOS': {'jerarquia': '5.3', 'tipo': 'simple', 'actual': obtener_valor_celda('I9'),
                            'meta': META_VALUES['OTROS INGRESOS'],
                            'simulable': True},
 
@@ -298,23 +298,23 @@ def obtener_estructura_cuentas():
             'componentes': ['COSTO DIRECTO', 'COSTO INDIRECTO', 'OTROS COSTOS'],
             'subcuentas': {
                 'COSTO DIRECTO': {
-                    'MATERIALES A PROCESO': {'actual': obtener_valor_celda('I13'),
+                    'MATERIALES A PROCESO': {'actual': obtener_valor_celda('I12'),
                                              'meta': META_VALUES['COSTO']['COSTO DIRECTO']['MATERIALES A PROCESO'],
                                              'simulable': True},
-                    'MANO DE OBRA ARMADO': {'actual': obtener_valor_celda('I14'),
+                    'MANO DE OBRA ARMADO': {'actual': obtener_valor_celda('I13'),
                                             'meta': META_VALUES['COSTO']['COSTO DIRECTO']['MANO DE OBRA ARMADO'],
                                             'simulable': True}
                 },
                 'COSTO INDIRECTO': {
-                    'COSTOS DE CALIDAD': {'actual': obtener_valor_celda('I15'),
+                    'COSTOS DE CALIDAD': {'actual': obtener_valor_celda('I14'),
                                           'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE CALIDAD'],
                                           'simulable': True},
-                    'COSTOS DE MOLDES': {'actual': obtener_valor_celda('I16'),
+                    'COSTOS DE MOLDES': {'actual': obtener_valor_celda('I15'),
                                          'meta': META_VALUES['COSTO']['COSTO INDIRECTO']['COSTOS DE MOLDES'],
                                          'simulable': True}
                 },
                 'OTROS COSTOS': {
-                    'OTROS COSTOS': {'actual': obtener_valor_celda('I17'), 'meta': META_VALUES['COSTO']['OTROS COSTOS'],
+                    'OTROS COSTOS': {'actual': obtener_valor_celda('I16'), 'meta': META_VALUES['COSTO']['OTROS COSTOS'],
                                      'simulable': True}}
             }
         },
@@ -331,7 +331,7 @@ def obtener_estructura_cuentas():
         # Resto de la estructura
         'EBITDA OPERATIVA': {'jerarquia': '10', 'tipo': 'formula',
                               'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
-        'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': obtener_valor_celda('I63'),
+        'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': obtener_valor_celda('I62'),
                                   'meta': META_VALUES['TOTAL DE OTROS GASTOS'],
                                   'simulable': True},
         'EBITDA': {'jerarquia': '12', 'tipo': 'formula', 'formula': 'EBITDA OPERATIVA - TOTAL DE OTROS GASTOS'},
@@ -340,13 +340,13 @@ def obtener_estructura_cuentas():
             'componentes': ['GASTOS FINANCIEROS', 'PRODUCTOS FINANCIEROS', 'RESULTADO CAMBIARIO'],
             'subcuentas': {
                 # Valores tomados directamente de la imagen para 'meta' y 'actual'
-                'GASTOS FINANCIEROS': {'actual': obtener_valor_celda('I66'),
+                'GASTOS FINANCIEROS': {'actual': obtener_valor_celda('I65'),
                                        'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['GASTOS FINANCIEROS'],
                                        'simulable': True},
-                'PRODUCTOS FINANCIEROS': {'actual': obtener_valor_celda('I67'),
+                'PRODUCTOS FINANCIEROS': {'actual': obtener_valor_celda('I66'),
                                           'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['PRODUCTOS FINANCIEROS'],
                                           'simulable': True},
-                'RESULTADO CAMBIARIO': {'actual': obtener_valor_celda('I68'),
+                'RESULTADO CAMBIARIO': {'actual': obtener_valor_celda('I67'),
                                         'meta': META_VALUES['FINANCIEROS_INDIVIDUALES']['RESULTADO CAMBIARIO'],
                                         'simulable': True}
             }
@@ -640,6 +640,54 @@ def aplicar_estilo_financiero(df):
 
     return df.style.apply(estilo_fila, axis=1)
 
+# Se definen las acciones propuestas por la dirección
+ACCIONES_PROPUESTAS = """
+**Acciones Propuestas por la Dirección para Mejorar el EBITDA:**
+
+**Cambios FINANCIEROS:**
+* **Revisión y reclasificación de costos operativos:** Asegúrate de que no haya costos ocultos cargados como operativos que deberían ir como inversiones o extraordinarios.
+* **Renegociación de condiciones con proveedores y arrendamientos:** Alargar plazos, bajar tasas, eliminar penalizaciones. Mejora flujo y reduce impacto en resultados.
+* **Gestión activa del capital de trabajo:** Acelera cuentas por cobrar, extiende cuentas por pagar (sin romper relaciones), y optimiza inventarios.
+* **Control riguroso del presupuesto real vs planeado:** Implementa revisiones mensuales por centro de costo. Corrige desvíos rápido.
+* **Cero acumulación de gastos innecesarios de baja escala:** Licencias de software sin uso, suscripciones, papelería, viáticos mal controlados: suma mucho al año.
+* **Automatización de reportes y conciliaciones:** Reduce horas hombre en tareas repetitivas. Usa BI para enfocar tiempo en análisis, no en captura.
+* **Evaluación trimestral del ROI por unidad de negocio:** Algunas áreas pueden estar operando con bajo retorno sin ser evidentes. Cierra, combina o reestructura.
+* **Auditoría de contratos fijos (seguros, software, servicios):** Revisa cláusulas, niveles de servicio, y renegocia cada año. Muchas veces hay inflación encubierta.
+
+**Acciones a través de la LOGÍSTICA:**
+* **Optimización de rutas de entrega:** Usa software de ruteo para reducir kilómetros, tiempos y consumo de combustible (reducción esperada: hasta 10–20% en costo por entrega).
+* **Consolidación de pedidos y entregas:** Agrupa entregas por zona o día para hacer menos viajes con más carga.
+* **Revisión de tarifas con transportistas externos:** Negocia contratos con base en volumen anual proyectado. Evalúa cambiar de proveedor.
+* **Control de devoluciones y rechazos logísticos:** Mejora precisión en picking y documentación (meta: tasa de error logística <1.5%).
+* **Digitalización de trazabilidad y control de entregas:** Usa GPS, apps de tracking o guías digitales para evitar entregas fallidas o retrasos.
+* **Alianzas logísticas compartidas:** Comparte flete con otra empresa complementaria para reducir costos fijos.
+* **Indicadores logísticos en tiempo real (KPIs):** Costo logístico por unidad entregada, Costo logístico como % de ventas, Tiempo promedio de entrega, Porcentaje de entregas a tiempo (OTIF).
+
+**Acciones COMERCIALES:**
+* **Subir ticket promedio por cliente:** Implementa upselling, venta cruzada y combos con productos de alto margen (meta: aumentar ticket promedio al menos 10–15%).
+* **Reducir descuentos excesivos:** Establece política clara de descuentos máximos. Bonifica sobre margen, no solo sobre volumen.
+* **Revisar precios por rentabilidad, no solo por competencia:** Reposiciona productos con bajo precio y alta percepción de valor. Aumentos selectivos de 3–5%.
+* **Segmentar clientes por rentabilidad:** Prioriza a los clientes que generan más margen.
+* **Optimizar canales de venta:** Impulsa canales con menor CAC (costo de adquisición de cliente).
+* **Reducir el CAC (costo de adquisición de cliente):** Automatiza marketing, enfoca prospección y mejora conversión.
+* **Mejorar la tasa de cierre por vendedor:** Capacitación en cierre, CRM efectivo.
+* **Eliminar productos no rentables del portafolio activo:** Enfoca el equipo en líneas con buen margen.
+* **Establecer metas de margen por vendedor o canal:** Incentiva la rentabilidad.
+* **Medir y gestionar el retorno por cliente.**
+
+**Estrategias en OPERACIONES Y PRODUCCIÓN:**
+* **Reducción de desperdicios y mermas:** Implementa controles de calidad en línea. Mide scrap diario. Usa principios Lean.
+* **Mejora de productividad por línea o célula de trabajo:** KPI: unidades producidas por hora-hombre. Capacita personal. Automatiza procesos.
+* **Mantenimiento preventivo, no solo correctivo:** Evita paros no planificados. Implementa rutinas de mantenimiento. Usa TPM.
+* **Reducción de inventarios ineficientes:** Aplica métodos como Kanban o Just-in-Time. Integra inventarios al ERP.
+* **Estandarización de procesos operativos:** Documenta y entrena en SOPs.
+* **Evaluación y renegociación de costos de insumos y materiales:** Analiza alternativas. Revisa contratos.
+* **Costo de no calidad (CONQ):** Mide cuánto cuesta cada reclamo, devolución o garantía.
+* **Medición de eficiencia por turno, línea y producto:** Utiliza OEE.
+* **Simulación de capacidad productiva vs. demanda real:** Asegúrate de no tener cuellos de botella ociosos ni sobrecapacidad.
+* **KPI operativos vinculados al EBITDA:** Costo por unidad producida, Costo de scrap y reproceso (% de ventas), Tiempo de ciclo promedio, Entregas a tiempo (% OTIF).
+"""
+
 def generar_recomendacion_variables_ia(df_completo):
     if not GEMINI_AVAILABLE:
         return "⚠️ **Error**: La API de Gemini no está configurada."
@@ -831,14 +879,17 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
     **Razones Financieras (Rentabilidad y Eficiencia):**
     {razones_table_md}
 
+    **Acciones Propuestas por la Dirección para Mejorar el EBITDA (para que elijas las más relevantes):**
+    {ACCIONES_PROPUESTAS}
+
     **Análisis Estratégico y Recomendaciones Ejecutivas (Máximo 100 palabras):**
 
     1.  **Panorama General y Razones Clave (Actual vs. Meta y Simulado):**
         -   Inicia con un resumen de 1-2 frases sobre el cumplimiento de la meta del BAI y las principales tendencias en las **razones financieras **. ¿Cómo se comparan los porcentajes Actuales, Meta y Simulados? ¿Qué implicaciones tiene para la salud financiera y la estrategia de PORTAWARE?
         -   Identifica las 2-3 áreas principales (Ventas, Costos, Gastos) y las razones financieras asociadas que explican la mayor parte de la desviación del BAI y los márgenes.
 
-    2.  **Recomendaciones Estratégicas y Cuantificables:**
-        -   Proporciona 2-3 recomendaciones *accionables* para PORTAWARE, enfocadas en mejorar las razones financieras y el BAI, priorizando el cierre de las brechas más grandes o el impulso de la estrategia de expansión. Incluye:
+    2.  **Recomendaciones Estratégicas y Cuantificables (Selecciona y adapta de las 'Acciones Propuestas por la Dirección'):**
+        -   Proporciona 2-3 recomendaciones *accionables* para PORTAWARE, enfocadas en mejorar las razones financieras y el BAI, priorizando el cierre de las brechas más grandes o el impulso de la estrategia de expansión. **Estas recomendaciones deben basarse en las "Acciones Propuestas por la Dirección" proporcionadas en este prompt, eligiendo las más relevantes y concretas dada la situación actual.** Incluye:
             * **Acción específica** (ej: "Optimizar la compra de polímeros para mejorar el Margen Bruto en X puntos porcentuales").
             * **Razón Financiera impactada** y su potencial de mejora.
             * **Relevancia estratégica** para PORTAWARE, considerando su expansión internacional y el manejo de costos.
@@ -1301,7 +1352,7 @@ with tab1:
     df_display.rename(columns={
         'Simulado (% VN)': '% Sim. vs VN',
         'Meta (% VN)': '% Meta vs VN',
-        'Brecha vs Meta (%)': 'Brecha (% S vs M)'
+        'Brecha (% S vs M)': 'Brecha (% S vs M)'
     }, inplace=True)
 
     formatos = {
@@ -1415,3 +1466,5 @@ with tab2:
 
     if 'informe_ia' in st.session_state:
         st.markdown(st.session_state['informe_ia'])
+
+
