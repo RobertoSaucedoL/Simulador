@@ -708,17 +708,8 @@ def generar_recomendacion_variables_ia(df_completo):
     {top_deviations_table_md}
 
     **Análisis y Recomendación Estratégica (máximo 100 palabras):**
-    Basándote únicamente en la tabla de desviaciones anterior y el contexto de PORTAWARE y ACCIONES PROPUESTAS:
-    1.  **Diagnóstico Rápido:** ¿Cuál es la tendencia general de estas desviaciones y su implicación para el EBITDA? ¿Estamos por encima o por debajo de la meta en las áreas clave?
-    2.  **Variables Clave y Dirección de Ajuste:** Para las 3-5 variables con mayor desviación (no más de 5):
-        * Nombra la variable.
-        * Indica brevemente el impacto en el BAI y la conexión con el contexto de PORTAWARE (ej., "impacto directo en ventas y la estrategia de expansión", "reduce margen por costos de materia prima").
-        * Menciona una **acción estratégica específica y cuantificable** (si es posible) para esa variable, considerando el mercado y ambiente económico actual.
-    3.  **Priorización:** ¿Cuáles 2-3 variables (revisa sub cuenta) de esta lista deberían ser la *máxima prioridad* para la simulación inicial, y por qué, en línea con el crecimiento nacional e internacional de PORTAWARE?
-    4.  **Conclusión General:** Una breve frase de cierre sobre el potencial de mejora estratégica.
-    # Se definen las acciones propuestas por la dirección
-
-ACCIONES_PROPUESTAS = """
+    Basándote únicamente en la tabla de desviaciones anterior y el contexto de PORTAWARE y ACCIONES PROPUESTAS ACCIONES_PROPUESTAS = """
+  
 **Acciones Propuestas por la Dirección para Mejorar el EBITDA:**
 
 **Cambios FINANCIEROS:**
@@ -763,7 +754,15 @@ ACCIONES_PROPUESTAS = """
 * **Medición de eficiencia por turno, línea y producto:** Utiliza OEE.
 * **Simulación de capacidad productiva vs. demanda real:** Asegúrate de no tener cuellos de botella ociosos ni sobrecapacidad.
 * **KPI operativos vinculados al EBITDA:** Costo por unidad producida, Costo de scrap y reproceso (% de ventas), Tiempo de ciclo promedio, Entregas a tiempo (% OTIF).
-"""
+""":
+    1.  **Diagnóstico Rápido:** ¿Cuál es la tendencia general de estas desviaciones y su implicación para el EBITDA? ¿Estamos por encima o por debajo de la meta en las áreas clave?
+    2.  **Variables Clave y Dirección de Ajuste:** Para las 3-5 variables con mayor desviación (no más de 5):
+        * Nombra la variable.
+        * Indica brevemente el impacto en el BAI y la conexión con el contexto de PORTAWARE (ej., "impacto directo en ventas y la estrategia de expansión", "reduce margen por costos de materia prima").
+        * Menciona una **acción estratégica específica y cuantificable** (si es posible) para esa variable, considerando el mercado y ambiente económico actual.
+    3.  **Priorización:** ¿Cuáles 2-3 variables (revisa sub cuenta) de esta lista deberían ser la *máxima prioridad* para la simulación inicial, y por qué, en línea con el crecimiento nacional e internacional de PORTAWARE?
+    4.  **Conclusión General:** Una breve frase de cierre sobre el potencial de mejora estratégica.
+    # Se definen las acciones propuestas por la dirección
 
     Usa un tono profesional y directo. Formatea tu respuesta con Markdown, incluyendo negritas y listas.
     """
