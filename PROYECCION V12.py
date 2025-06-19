@@ -1,4 +1,4 @@
-import pandas as pd  # <-- Asegurar esta importación al inicio
+import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
@@ -8,9 +8,30 @@ import os
 import numpy as np
 from openpyxl import load_workbook
 
-# --- CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Simulador Financiero Jerárquico PORTAWARE", layout="wide",
-                   initial_sidebar_state="expanded")
+# --- CONFIGURACIÓN EXCEL DINÁMICA ---
+EXCEL_PATH = "PY FINANCIERO V2.xlsx"  # Archivo en la raíz del repo
+SHEET_NAME = "PY"
+
+def cargar_excel():
+    """Carga el archivo Excel y lo almacena en session_state"""
+    try:
+        import pandas as pd  # Importación local para asegurar disponibilidad
+        
+        wb = load_workbook(EXCEL_PATH, data_only=True)
+        sheet = wb[SHEET_NAME]
+        
+        # Convertir hoja a DataFrame
+        data = sheet.values
+        cols = next(data)
+        df = pd.DataFrame(data, columns=cols)
+        
+        # Almacenar en session_state
+        st.session_state.excel_data = df
+        st.session_state.last_modified = os.path.getmtime(EXCEL_PATH)
+        return True
+    except Exception as e:
+        st.error(f"Error al cargar Excel: {str(e)}")
+        return False
 
 # --- OCULTAR ELEMENTOS POR DEFECTO DE STREAMLIT (VERSION MÁS AGRESIVA) ---
 hide_st_style = """
