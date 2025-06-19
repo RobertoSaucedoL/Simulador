@@ -7,13 +7,84 @@ import json
 import os
 import numpy as np
 from openpyxl import load_workbook
+from pathlib import Path
+from datetime import datetime
+
+# --- OBTENER RUTA ACTUAL ---
+current_dir = Path(__file__).parent
+
+# --- CONFIGURACIÓN INICIAL ---
+st.set_page_config(page_title="Simulador Financiero Jerárquico PORTAWARE", layout="wide",
+                   initial_sidebar_state="expanded")
+
+# --- OCULTAR ELEMENTOS DE STREAMLIT (VERSIÓN ACTUALIZADA) ---
+hide_st_style = """
+<style>
+/* Oculta elementos de la interfaz de Streamlit */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
+.stDeployButton {visibility: hidden;}
+[data-testid="stToolbar"] {display: none;}
+[data-testid="stDecoration"] {display: none;}
+[data-testid="stStatusWidget"] {display: none;}
+#stStatusWidget {display: none;}
+[data-testid="baseButton-header"] {display: none;}
+.st-emotion-cache-1wbqy5l {display: none;}
+.st-emotion-cache-1y4p8pa {padding: 0; margin: 0;}
+
+/* Custom style for the small info text below inputs */
+.small-input-info p {
+    font-size: 0.75rem !important;
+    margin-bottom: 2px;
+    margin-top: 2px;
+}
+</style>
+"""
+st.markdown(hide_st_style, unsafe_allow_html=True)
 
 # --- CONFIGURACIÓN EXCEL DINÁMICA ---
-EXCEL_PATH = "PY FINANCIERO V2.xlsx"  # Archivo en la raíz del repo
+EXCEL_PATH = current_dir / "PY FINANCIERO V2.xlsx"
 SHEET_NAME = "PY"
 
+# Verificar si el archivo existe
+if not EXCEL_PATH.exists():
+    st.error(f"⚠️ Archivo Excel no encontrado en: {EXCEL_PATH}")
+    st.info("Por favor, coloca el archivo 'PY FINANCIERO V2.xlsx' en la misma carpeta que este script")
+    st.stop()
+    
 def cargar_excel():
-    """Carga el archivo Excel y lo almacena en session_state"""
+    try:
+        wb = load_workbook(EXCEL_PATH, data_only=True)
+        sheet = wb[SHEET_NAME]
+        
+        data = sheet.values
+        cols = next(data)
+        df = pd.DataFrame(data, columns=cols)
+        
+        st.session_state.excel_data = df
+        st.session_state.last_modified = datetime.now()
+        return True
+    except Exception as e:
+        st.error(f"Error al cargar Excel: {str(e)}")
+        return False
+
+# En el sidebar
+st.sidebar.markdown("---")
+st.sidebar.subheader("Actualización de Datos")
+
+if st.sidebar.button("🔄 Recargar Datos desde Excel", use_container_width=True):
+    if cargar_excel():
+        st.sidebar.success("¡Datos actualizados correctamente!")
+        st.cache_data.clear()
+        st.rerun()
+    else:
+        st.sidebar.error("Error al cargar datos")
+
+# Mostrar última actualización
+if 'last_modified' in st.session_state:
+    st.sidebar.caption(f"Última actualización: {st.session_state.last_modified.strftime('%Y-%m-%d %H:%M:%S')}")
+    
     try:
         import pandas as pd  # Importación local para asegurar disponibilidad
         
