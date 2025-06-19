@@ -16,9 +16,9 @@ current_dir = Path(__file__).parent
 
 # --- CONFIGURACIÓN INICIAL ---
 st.set_page_config(page_title="Simulador Financiero Jerárquico PORTAWARE", layout="wide",
-                   initial_sidebar_state="expanded")
+                    initial_sidebar_state="expanded")
 
-# --- OCULTAR ELEMENTOS DE STREAMLIT (VERSIÓN ACTUALIZADA) ---
+# --- OCULTAR ELEMENTOS DE STREAMLIT (VERSIÓN ACTUALIZADA Y AGRESIVA) ---
 hide_st_style = """
 <style>
 /* Oculta elementos de la interfaz de Streamlit */
@@ -35,10 +35,15 @@ header {visibility: hidden !important;}
 .st-emotion-cache-1y4p8pa {padding: 0 !important; margin: 0 !important;}
 .st-emotion-cache-z5fcl4 {padding-top: 0 !important; padding-bottom: 0 !important;}
 
-/* Elementos específicos de la nueva versión */
-[data-testid="collapsedControl"] {display: none !important;}
-.st-emotion-cache-1dp5vir {display: none !important;}
-.st-emotion-cache-1oe5ca2 {max-width: none !important;}
+/* Elementos específicos de la nueva versión para asegurar que se oculten más iconos y controles */
+[data-testid="collapsedControl"] {display: none !important;} /* Oculta el botón de expandir/colapsar sidebar */
+.st-emotion-cache-1dp5vir {display: none !important;} /* Oculta el icono de menú del sidebar en móviles */
+.st-emotion-cache-1oe5ca2 {max-width: none !important;} /* Ajusta el ancho del contenido principal */
+
+/* Asegura ocultar el botón de "Run" o los indicadores de estado */
+.st-emotion-cache-vdgyx8 {display: none !important;} /* Posible botón de recarga o estado */
+.st-emotion-cache-ks4j5q {display: none !important;} /* Otro posible elemento de estado */
+.st-emotion-cache-10w473v {display: none !important;} /* Puede ser un botón de menú o recarga */
 
 /* Custom style for the small info text below inputs */
 .small-input-info p {
@@ -89,6 +94,25 @@ PALETA_GRAFICOS = {
     'Neutro': '#6C757D'  # Gris neutro
 }
 
+# --- FUNCIÓN PARA OBTENER VALOR DE CELDA (CORRECCIÓN: DEFINICIÓN AGREGADA/MOVIDA AQUÍ) ---
+def obtener_valor_celda(cell_address):
+    """
+    Obtiene el valor de una celda específica del archivo Excel.
+    Asume que el formato de la celda es 'ColumnaLetraFilaNumero' (ej. 'I2').
+    """
+    try:
+        wb = load_workbook(EXCEL_PATH, data_only=True)
+        sheet = wb[SHEET_NAME]
+        cell_value = sheet[cell_address].value
+        # Intentar convertir a float. Si el valor es None o no numérico, retorna 0.0
+        try:
+            return float(cell_value)
+        except (ValueError, TypeError):
+            return 0.0
+    except Exception as e:
+        st.warning(f"Error al leer la celda {cell_address} del Excel: {e}. Retornando 0.0.")
+        return 0.0
+
 # --- FUNCIÓN PARA CARGAR EXCEL ---
 def cargar_excel():
     """Carga el archivo Excel y lo almacena en session_state"""
@@ -102,9 +126,9 @@ def cargar_excel():
         
         sheet = wb[SHEET_NAME]
         
-        # Convertir hoja a DataFrame
+        # Convertir hoja a DataFrame (considerando que la primera fila son encabezados)
         data = sheet.values
-        cols = next(data)
+        cols = next(data) # Obtener la primera fila como encabezados
         df = pd.DataFrame(data, columns=cols)
         
         # Almacenar en session_state
@@ -240,8 +264,8 @@ def obtener_estructura_cuentas():
                                  'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['CATALOGO'],
                                  'simulable': True},
                     'MAYOREO': {'actual': obtener_valor_celda('I4'),
-                                'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['MAYOREO'],
-                                'simulable': True}
+                                 'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS NACIONAL 16%']['MAYOREO'],
+                                 'simulable': True}
                 },
                 'VENTAS BRUTAS EXTRANJERO': {
                     'RETAIL': {'actual': obtener_valor_celda('I5'),
@@ -251,8 +275,8 @@ def obtener_estructura_cuentas():
                                  'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['CATALOGO'],
                                  'simulable': True},
                     'MAYOREO': {'actual': obtener_valor_celda('I7'),
-                                'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['MAYOREO'],
-                                'simulable': True}
+                                 'meta': META_VALUES['VENTAS BRUTAS']['VENTAS BRUTAS EXTRANJERO']['MAYOREO'],
+                                 'simulable': True}
                 }
             }
         },
@@ -306,7 +330,7 @@ def obtener_estructura_cuentas():
 
         # Resto de la estructura
         'EBITDA OPERATIVA': {'jerarquia': '10', 'tipo': 'formula',
-                             'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
+                              'formula': 'VENTAS NETAS - COSTO - TOTAL GASTOS OPERATIVOS'},
         'TOTAL DE OTROS GASTOS': {'jerarquia': '11', 'tipo': 'simple', 'actual': obtener_valor_celda('I62'),
                                   'meta': META_VALUES['TOTAL DE OTROS GASTOS'],
                                   'simulable': True},
@@ -630,8 +654,8 @@ def generar_recomendacion_variables_ia(df_completo):
                                                                                                         'Cuenta'].values else \
                 datos['actual']
             meta_val = df_completo.loc[df_completo['Cuenta'] == cuenta_name, 'Meta'].iloc[0] if cuenta_name in \
-                                                                                                df_completo[
-                                                                                                    'Cuenta'].values else \
+                                                                                                 df_completo[
+                                                                                                     'Cuenta'].values else \
                 datos['meta']
             simulable_accounts_details.append({
                 'Variable': cuenta_name, 'Actual': actual_val, 'Meta': meta_val
@@ -660,7 +684,7 @@ def generar_recomendacion_variables_ia(df_completo):
     df_simulable['Abs_Deviation'] = df_simulable['Desviacion (Actual vs Meta)'].abs()
 
     df_top_deviations = df_simulable[df_simulable['Abs_Deviation'] > 1000].sort_values(by='Abs_Deviation',
-                                                                                       ascending=False).head(7)
+                                                                                        ascending=False).head(7)
 
     top_deviations_table_md = "No se identificaron desviaciones significativas entre el Actual y la Meta para recomendar acciones en este momento."
     if not df_top_deviations.empty:
@@ -720,8 +744,8 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
     margen_bruto_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', actual_col].iloc[
         0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
     ebitda_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', actual_col].iloc[0] if 'EBITDA' in \
-                                                                                                      cuentas_para_ia[
-                                                                                                          'Cuenta'].values else 0
+                                                                                                       cuentas_para_ia[
+                                                                                                           'Cuenta'].values else 0
     bai_actual = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'BAI', actual_col].iloc[0] if 'BAI' in \
                                                                                                 cuentas_para_ia[
                                                                                                     'Cuenta'].values else 0
@@ -731,8 +755,8 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
     margen_bruto_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', meta_col].iloc[
         0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
     ebitda_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', meta_col].iloc[0] if 'EBITDA' in \
-                                                                                                  cuentas_para_ia[
-                                                                                                      'Cuenta'].values else 0
+                                                                                                    cuentas_para_ia[
+                                                                                                        'Cuenta'].values else 0
     bai_meta = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'BAI', meta_col].iloc[0] if 'BAI' in cuentas_para_ia[
         'Cuenta'].values else 1
 
@@ -741,16 +765,16 @@ def generar_insight_financiero(df_completo, actual_col='Actual', meta_col='Meta'
     margen_bruto_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'MARGEN BRUTO', simulado_col].iloc[
         0] if 'MARGEN BRUTO' in cuentas_para_ia['Cuenta'].values else 0
     ebitda_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'EBITDA', simulado_col].iloc[0] if 'EBITDA' in \
-                                                                                                          cuentas_para_ia[
-                                                                                                              'Cuenta'].values else 0
+                                                                                                           cuentas_para_ia[
+                                                                                                               'Cuenta'].values else 0
     bai_simulado = cuentas_para_ia.loc[cuentas_para_ia['Cuenta'] == 'BAI', simulado_col].iloc[0] if 'BAI' in \
-                                                                                                    cuentas_para_ia[
-                                                                                                        'Cuenta'].values else 0
+                                                                                                      cuentas_para_ia[
+                                                                                                          'Cuenta'].values else 0
 
     margen_bruto_vn_actual = (margen_bruto_actual / ventas_netas_actual * 100) if ventas_netas_actual != 0 else 0
     margen_bruto_vn_meta = (margen_bruto_meta / ventas_netas_meta * 100) if ventas_netas_meta != 0 else 0
     margen_bruto_vn_simulado = (
-            margen_bruto_simulado / ventas_netas_simulado * 100) if ventas_netas_simulado != 0 else 0
+                margen_bruto_simulado / ventas_netas_simulado * 100) if ventas_netas_simulado != 0 else 0
     razones_data.append({'Razon Financiera': 'Margen Bruto sobre Ventas Netas (%)', 'Actual': margen_bruto_vn_actual,
                          'Meta': margen_bruto_vn_meta, 'Simulado': margen_bruto_vn_simulado})
 
@@ -990,7 +1014,7 @@ with st.sidebar:
     # Cargar Escenario
     if scenario_names:
         selected_scenario_load = st.selectbox("Seleccionar escenario para cargar:", [""] + scenario_names,
-                                              key="load_scenario_selectbox")
+                                             key="load_scenario_selectbox")
         st.button("Cargar Escenario", use_container_width=True, disabled=(selected_scenario_load == ""),
                   on_click=load_scenario_callback)
     else:
@@ -1124,23 +1148,23 @@ with st.sidebar:
                         ajuste_automatico_para_display = (porcentaje_ajuste_val / 100) * cambio_ventas_brutas_nacional
 
                         st.number_input(f"{item.replace('_', ' ').title()}",
-                                        min_value=min_val,
-                                        max_value=max_val,
-                                        value=ajuste_automatico_para_display,
-                                        step=1000.0,
-                                        key=key,
-                                        disabled=True,
-                                        help="Este valor se ajusta automáticamente según el 'Ajuste Automático de Costos'."
-                                        )
+                                         min_value=min_val,
+                                         max_value=max_val,
+                                         value=ajuste_automatico_para_display,
+                                         step=1000.0,
+                                         key=key,
+                                         disabled=True,
+                                         help="Este valor se ajusta automáticamente según el 'Ajuste Automático de Costos'."
+                                         )
                         display_number_input_info_with_actual_meta_brecha(key, actual_val, meta_val,
                                                                           is_auto_adjusted=True)
                     else:
                         st.number_input(f"{item.replace('_', ' ').title()}", min_value=min_val, max_value=max_val,
-                                        value=st.session_state.get(key, 0.0), step=1000.0, key=key)
+                                         value=st.session_state.get(key, 0.0), step=1000.0, key=key)
                         display_number_input_info_with_actual_meta_brecha(key, actual_val, meta_val)
                 else:
                     st.number_input(f"{item.replace('_', ' ').title()}", min_value=min_val, max_value=max_val,
-                                    value=st.session_state.get(key, 0.0), step=1000.0, key=key)
+                                     value=st.session_state.get(key, 0.0), step=1000.0, key=key)
                     display_number_input_info_with_actual_meta_brecha(key, actual_val, meta_val)
 
         with st.expander("🔧 Costos Indirectos"):
@@ -1167,18 +1191,18 @@ with st.sidebar:
         st.subheader("Gastos Operativos")
         grupos_gastos = {
             "👥 Personal": ['SUELDOS Y SALARIOS', 'PRESTACIONES', 'OTRAS COMPENSACIONES', 'IMPTOS S/NOMINA',
-                           'CONTRIBUCIONES PATRONALES', 'SEGURIDAD E HIGIENE', 'GASTOS DE PERSONAL'],
+                            'CONTRIBUCIONES PATRONALES', 'SEGURIDAD E HIGIENE', 'GASTOS DE PERSONAL'],
             "🏢 Instalaciones": ['ARRENDAMIENTOS', 'SERVICIOS INSTALACIONES', 'SEGURIDAD Y VIGILANCIA',
-                                'MANTENIMIENTOS'],
+                                 'MANTENIMIENTOS'],
             "🚚 Logística y Aduanas": ['FLETES EXTERNOS', 'FLETES INTERNOS', 'GASTOS ADUANALES'],
             "🚗 Vehículos y Viajes": ['COMBUSTIBLE', 'ESTACIONAMIENTO', 'TRANSPORTE LOCAL', 'GASTOS DE VIAJE'],
             "💼 Asesorías y Servicios Externos": ['ASESORIAS PM', 'ASESORIAS PF', 'PORTALES CLIENTES'],
             "📦 Suministros": ['SUMINISTROS GENERALES', 'SUMINISTROS OFICINA', 'SUMINISTROS COMPUTO'],
             "📊 Marketing y Diseño": ['MUESTRAS', 'FERIAS Y EXPOSICIONES', 'PUBLICIDAD IMPRESA', 'IMPRESIONES 3D',
-                                     'MATERIAL DISEÑO'],
+                                      'MATERIAL DISEÑO'],
             "⚖️ Legales y Administrativos": ['OTROS IMPUESTOS Y DERECHOS', 'NO DEDUCIBLES', 'SEGUROS Y FIANZAS',
-                                             'PATENTES', 'LICENCIAS Y SOFTWARE', 'TIMBRES Y FOLIOS FISCALES',
-                                             'COMISION MERCANTIL'],
+                                            'PATENTES', 'LICENCIAS Y SOFTWARE', 'TIMBRES Y FOLIOS FISCALES',
+                                            'COMISION MERCANTIL'],
             "📞 Comunicación y Atención": ['CELULARES', 'MENSAJERIA', 'ATENCION A CLIENTES', 'CUOTAS Y SUSCRIPCIONES'],
             "🎓 Capacitación": ['CAPACITACION Y ENTRENAMIENTO', 'INVENTARIO FÍSICO']
         }
