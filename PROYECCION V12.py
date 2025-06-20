@@ -12,6 +12,7 @@ from datetime import datetime
 import time
 
 # --- OBTENER RUTA ACTUAL ---
+# Usamos una forma robusta de obtener el directorio, que funciona tanto local como en servidores.
 current_dir = Path(__file__).parent if "__file__" in locals() else Path.cwd()
 
 # --- CONFIGURACIÓN INICIAL ---
@@ -523,19 +524,15 @@ def generar_dataframe_completo(changes):
     df['Brecha vs Meta (%)'] = ((df['Simulado'] - df['Meta']) / df['Meta'].replace(0, pd.NA)) * 100
     df['Brecha Simulado vs Actual (%)'] = ((df['Simulado'] - df['Actual']) / df['Actual'].replace(0, pd.NA)) * 100
 
-    # --- INICIO DE LA MODIFICACIÓN 1 ---
+    # --- LÓGICA PARA NUEVA COLUMNA ---
     ventas_netas_actual = df.loc[df['Cuenta'] == 'VENTAS NETAS', 'Actual'].iloc[0] if 'VENTAS NETAS' in df[
         'Cuenta'].values else 1
-    # --- FIN DE LA MODIFICACIÓN 1 ---
-    
     ventas_netas_simulado = df.loc[df['Cuenta'] == 'VENTAS NETAS', 'Simulado'].iloc[0] if 'VENTAS NETAS' in df[
         'Cuenta'].values else 1
     ventas_netas_meta = df.loc[df['Cuenta'] == 'VENTAS NETAS', 'Meta'].iloc[0] if 'VENTAS NETAS' in df[
         'Cuenta'].values else 1
-
-    # --- INICIO DE LA MODIFICACIÓN 2 ---
+    
     df['Actual (% VN)'] = (df['Actual'] / ventas_netas_actual) * 100 if ventas_netas_actual != 0 else 0
-    # --- FIN DE LA MODIFICACIÓN 2 ---
     df['Simulado (% VN)'] = (df['Simulado'] / ventas_netas_simulado) * 100 if ventas_netas_simulado != 0 else 0
     df['Meta (% VN)'] = (df['Meta'] / ventas_netas_meta) * 100 if ventas_netas_meta != 0 else 0
 
@@ -944,7 +941,8 @@ def simulate_plus_10_percent_sales_callback():
     st.session_state['sim_VENTAS_BRUTAS_NACIONAL_16%_CATALOGO'] = catalogo_actual * 0.10
 
 # --- INTERFAZ DE USUARIO ---
-st.title('📊 Simulador Financiero Jerárquico')
+# CAMBIO PARA VERIFICACIÓN: Se añade "- V2" al título.
+st.title('📊 Simulador Financiero Jerárquico - V2')
 
 # Inicializar datos de Excel si es la primera ejecución
 if 'excel_data' not in st.session_state:
@@ -1275,7 +1273,7 @@ tab1, tab2 = st.tabs(["📊 Dashboard de Brechas", "📈 Análisis Visual e IA"]
 
 with tab1:
     st.header("Dashboard de Brechas vs. Meta")
-    st.info("💡 **Consejo móvil:** En dispositivos pequeños, los controles de simulación están en el menú lateral (☰).")
+    st.info("💡 **Consejo:** El botón (☰) en la esquina superior izquierda ahora te permite mostrar u ocultar los controles de simulación.")
 
     col1, col2, col3, col4 = st.columns(4)
     ventas_netas = df_completo.loc[df_completo['Cuenta'] == 'VENTAS NETAS', 'Simulado'].iloc[0]
@@ -1303,11 +1301,12 @@ with tab1:
                 delta_color="normal")
 
     st.subheader("Análisis Comparativo Detallado")
-
-    # --- INICIO DE LA MODIFICACIÓN 3 ---
+    
+    # --- LÓGICA DE VISUALIZACIÓN DE LA TABLA CON LA NUEVA COLUMNA ---
     df_display = df_completo[[
         'Cuenta', 'Actual', 'Actual (% VN)', 'Simulado', 'Simulado (% VN)', 'Meta', 'Meta (% VN)', 'Brecha vs Meta (%)'
     ]].copy()
+    
     df_display.rename(columns={
         'Actual (% VN)': '% Act. vs VN',
         'Simulado (% VN)': '% Sim. vs VN',
@@ -1317,14 +1316,13 @@ with tab1:
 
     formatos = {
         'Actual': '{:,.0f}',
-        'Actual (% VN)': '{:,.2f}%',
+        '% Act. vs VN': '{:,.2f}%',
         'Simulado': '{:,.0f}',
         '% Sim. vs VN': '{:,.2f}%',
         'Meta': '{:,.0f}',
         '% Meta vs VN': '{:,.2f}%',
         'Brecha (% S vs M)': '{:+.2f}%'
     }
-    # --- FIN DE LA MODIFICACIÓN 3 ---
 
     row_height = 34
     header_height = 38
