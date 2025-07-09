@@ -69,7 +69,7 @@ PALETA_GRAFICOS = {
 # (El resto de tus diccionarios de constantes como META_VALUES va aquí sin cambios)
 # --- VALORES META HARDCODEADOS ---
 META_VALUES = {
-    'VENTAS BRUTAS': {
+    'VENTAS BRUTAS': {
         'VENTAS BRUTAS NACIONAL 16%': {
             'RETAIL': 168934800,
             'CATALOGO': 5232032,
