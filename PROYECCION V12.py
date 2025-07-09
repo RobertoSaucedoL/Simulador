@@ -222,7 +222,7 @@ def initialize_session_state():
 # ... (Estas funciones parecen correctas, así que las omito por brevedad)
 # --- FUNCIÓN PARA OBTENER VALOR DE CELDA (CORRECCIÓN: DEFINICIÓN AGREGADA/MOVIDA AQUÍ) ---
 def obtener_valor_celda(cell_address):
-"""
+    """
 Obtiene el valor de una celda específica del archivo Excel.
 Asume que el formato de la celda es 'ColumnaLetraFilaNumero' (ej. 'I2').
 """
