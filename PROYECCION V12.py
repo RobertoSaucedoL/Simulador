@@ -44,10 +44,15 @@ def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fl
     margen_bruto_pct = (margen_bruto / ventas_netas) * 100 if ventas_netas != 0 else 0
     margen_ebitda_pct = (ebitda / ventas_netas) * 100 if ventas_netas != 0 else 0
     
-    # Punto de equilibrio
+    # Punto de equilibrio mejorado - ventas mínimas para EBITDA aceptable
     gastos_fijos = nomina + rentas + otros_gastos
     gastos_variables_pct = pct_costo + pct_comisiones + pct_fletes + pct_gastos_financieros
-    punto_equilibrio = gastos_fijos / (1 - (gastos_variables_pct / 100)) if gastos_variables_pct < 100 else 0
+    margen_contribucion_pct = 100 - gastos_variables_pct
+    
+    if margen_contribucion_pct > 0:
+        punto_equilibrio = gastos_fijos / (margen_contribucion_pct / 100)
+    else:
+        punto_equilibrio = 0
     
     return {
         'costo': costo,
@@ -87,7 +92,8 @@ Punto de Equilibrio: ${calculos['punto_equilibrio']:,.0f}
 Proporciona: 1) Diagnóstico de salud financiera, 2) 2-3 recomendaciones específicas para mejorar rentabilidad, 3) Análisis del punto de equilibrio."""
     
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # Usar modelo disponible - corregir el nombre del modelo
+        model = genai.GenerativeModel('gemini-pro')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -205,8 +211,8 @@ with col2:
 with col3:
     st.metric(
         "🎯 EBITDA",
-        f"{calculos['margen_ebitda_pct']:.1f}%",
         f"${calculos['ebitda']/1_000_000:.1f}M",
+        f"{calculos['margen_ebitda_pct']:.1f}%",
         delta_color="normal"
     )
 
@@ -320,39 +326,56 @@ with col_controles:
         st.caption(f"Gastos Financieros: ${calculos['gastos_financieros']:,.0f}")
 
 with col_visuales:
-    # Gráfico de Puente de Utilidad
-    st.subheader("📊 Puente de Utilidad")
+    # Tabla de resultados financieros
+    st.subheader("📋 Resumen Financiero")
     
-    datos_waterfall = [
-        dict(name='Ventas Netas', y=st.session_state.ventas_netas, color=COLORES['principal']),
-        dict(name='Costo', y=-calculos['costo'], color=COLORES['negativo']),
-        dict(name='Margen Bruto', y=calculos['margen_bruto'], color=COLORES['positivo']),
-        dict(name='Gastos Op.', y=-calculos['gasto_total'], color=COLORES['secundario']),
-        dict(name='EBITDA Op.', y=calculos['ebitda_operativo'], color=COLORES['terciario']),
-        dict(name='G. Financieros', y=-calculos['gastos_financieros'], color=COLORES['negativo']),
-        dict(name='EBITDA', y=calculos['ebitda'], color=COLORES['positivo'])
+    # Crear tabla de resultados
+    datos_tabla = [
+        ["Ventas Netas", f"${st.session_state.ventas_netas:,.0f}", "100.0%"],
+        ["Costo de Ventas", f"${calculos['costo']:,.0f}", f"{st.session_state.pct_costo:.1f}%"],
+        ["Margen Bruto", f"${calculos['margen_bruto']:,.0f}", f"{calculos['margen_bruto_pct']:.1f}%"],
+        ["", "", ""],
+        ["Gastos Operativos:", "", ""],
+        [" - Nómina", f"${st.session_state.nomina:,.0f}", f"{(st.session_state.nomina/st.session_state.ventas_netas)*100:.1f}%"],
+        [" - Comisiones", f"${calculos['comisiones']:,.0f}", f"{st.session_state.pct_comisiones:.1f}%"],
+        [" - Fletes", f"${calculos['fletes']:,.0f}", f"{st.session_state.pct_fletes:.1f}%"],
+        [" - Rentas", f"${st.session_state.rentas:,.0f}", f"{(st.session_state.rentas/st.session_state.ventas_netas)*100:.1f}%"],
+        [" - Otros Gastos", f"${st.session_state.otros_gastos:,.0f}", f"{(st.session_state.otros_gastos/st.session_state.ventas_netas)*100:.1f}%"],
+        ["Total Gastos Operativos", f"${calculos['gasto_total']:,.0f}", f"{(calculos['gasto_total']/st.session_state.ventas_netas)*100:.1f}%"],
+        ["", "", ""],
+        ["EBITDA Operativo", f"${calculos['ebitda_operativo']:,.0f}", f"{(calculos['ebitda_operativo']/st.session_state.ventas_netas)*100:.1f}%"],
+        ["Gastos Financieros", f"${calculos['gastos_financieros']:,.0f}", f"{st.session_state.pct_gastos_financieros:.1f}%"],
+        ["EBITDA Final", f"${calculos['ebitda']:,.0f}", f"{calculos['margen_ebitda_pct']:.1f}%"],
+        ["", "", ""],
+        ["Punto de Equilibrio", f"${calculos['punto_equilibrio']:,.0f}", ""]
     ]
     
-    fig_waterfall = go.Figure()
+    # Crear tabla con Plotly
+    fig_tabla = go.Figure(data=[go.Table(
+        columnwidth=[2, 1.5, 1],
+        header=dict(
+            values=['<b>Concepto</b>', '<b>Monto</b>', '<b>%</b>'],
+            fill_color=COLORES['principal'],
+            align=['left', 'right', 'right'],
+            font=dict(color='white', size=12)
+        ),
+        cells=dict(
+            values=[[fila[0] for fila in datos_tabla], 
+                   [fila[1] for fila in datos_tabla], 
+                   [fila[2] for fila in datos_tabla]],
+            align=['left', 'right', 'right'],
+            fill_color=['white', 'white', 'white'],
+            font=dict(size=11),
+            height=25
+        )
+    )])
     
-    for dato in datos_waterfall:
-        fig_waterfall.add_trace(go.Bar(
-            name=dato['name'],
-            x=[dato['name']],
-            y=[dato['y']],
-            marker_color=dato['color'],
-            text=[f"${dato['y']/1_000_000:.1f}M"],
-            textposition='outside'
-        ))
-    
-    fig_waterfall.update_layout(
-        showlegend=False,
-        height=400,
-        margin=dict(l=20, r=20, t=20, b=80),
-        xaxis_tickangle=-45
+    fig_tabla.update_layout(
+        height=500,
+        margin=dict(l=0, r=0, t=0, b=0)
     )
     
-    st.plotly_chart(fig_waterfall, use_container_width=True)
+    st.plotly_chart(fig_tabla, use_container_width=True)
     
     # Gráfico de Composición de Gastos
     st.subheader("🥧 Composición de Gastos Operativos")
