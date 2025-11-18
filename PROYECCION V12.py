@@ -1,422 +1,415 @@
-import React, { useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Target, Zap } from 'lucide-react';
+import streamlit as st
+import plotly.graph_objects as go
+import plotly.express as px
+import google.generativeai as genai
+from datetime import datetime
 
-const SimuladorFinanciero = () => {
-  // Estados base
-  const [ventasNetas, setVentasNetas] = useState(189878959);
-  const [pctCosto, setPctCosto] = useState(47);
-  const [nomina, setNomina] = useState(25800000);
-  const [pctComisiones, setPctComisiones] = useState(3);
-  const [pctFletes, setPctFletes] = useState(6);
-  const [rentas, setRentas] = useState(6711000);
-  const [otrosGastos, setOtrosGastos] = useState(5446936);
-  const [pctGastosFinancieros, setPctGastosFinancieros] = useState(1);
+# --- CONFIGURACIÓN INICIAL ---
+st.set_page_config(
+    page_title="Simulador Financiero PORTAWARE", 
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-  // Estados para IA
-  const [analisisIA, setAnalisisIA] = useState('');
-  const [cargandoIA, setCargandoIA] = useState(false);
+# Configuración de Gemini AI
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    GEMINI_AVAILABLE = True
+except (FileNotFoundError, KeyError):
+    GEMINI_AVAILABLE = False
 
-  // Cálculos principales
-  const calculos = useMemo(() => {
-    const costo = ventasNetas * (pctCosto / 100);
-    const margenBruto = ventasNetas - costo;
-    const comisiones = ventasNetas * (pctComisiones / 100);
-    const fletes = ventasNetas * (pctFletes / 100);
-    const gastoTotal = nomina + comisiones + fletes + rentas + otrosGastos;
-    const ebitdaOperativo = margenBruto - gastoTotal;
-    const gastosFinancieros = ventasNetas * (pctGastosFinancieros / 100);
-    const ebitda = ebitdaOperativo - gastosFinancieros;
+# Paleta de colores
+COLORES = {
+    'positivo': '#28A745',
+    'negativo': '#DC3545',
+    'principal': '#1F77B4',
+    'secundario': '#FF7F0E',
+    'terciario': '#2CA02C',
+    'cuaternario': '#D62728',
+    'quinario': '#9467BD'
+}
+
+# --- FUNCIONES DE CÁLCULO ---
+def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fletes, rentas, otros_gastos, pct_gastos_financieros):
+    """Calcula todos los valores financieros"""
+    costo = ventas_netas * (pct_costo / 100)
+    margen_bruto = ventas_netas - costo
+    comisiones = ventas_netas * (pct_comisiones / 100)
+    fletes = ventas_netas * (pct_fletes / 100)
+    gasto_total = nomina + comisiones + fletes + rentas + otros_gastos
+    ebitda_operativo = margen_bruto - gasto_total
+    gastos_financieros = ventas_netas * (pct_gastos_financieros / 100)
+    ebitda = ebitda_operativo - gastos_financieros
     
-    const margenBrutoPct = (margenBruto / ventasNetas) * 100;
-    const margenEbitdaPct = (ebitda / ventasNetas) * 100;
+    margen_bruto_pct = (margen_bruto / ventas_netas) * 100 if ventas_netas != 0 else 0
+    margen_ebitda_pct = (ebitda / ventas_netas) * 100 if ventas_netas != 0 else 0
     
-    // Punto de equilibrio
-    const gastosOperativosFijos = nomina + rentas + otrosGastos;
-    const gastosVariablesPct = pctCosto + pctComisiones + pctFletes;
-    const puntoEquilibrio = gastosOperativosFijos / (1 - (gastosVariablesPct / 100));
+    # Punto de equilibrio
+    gastos_fijos = nomina + rentas + otros_gastos
+    gastos_variables_pct = pct_costo + pct_comisiones + pct_fletes + pct_gastos_financieros
+    punto_equilibrio = gastos_fijos / (1 - (gastos_variables_pct / 100)) if gastos_variables_pct < 100 else 0
     
     return {
-      costo,
-      margenBruto,
-      comisiones,
-      fletes,
-      gastoTotal,
-      ebitdaOperativo,
-      gastosFinancieros,
-      ebitda,
-      margenBrutoPct,
-      margenEbitdaPct,
-      puntoEquilibrio
-    };
-  }, [ventasNetas, pctCosto, nomina, pctComisiones, pctFletes, rentas, otrosGastos, pctGastosFinancieros]);
-
-  // Generar análisis con IA
-  const generarAnalisisIA = async () => {
-    setCargandoIA(true);
-    try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          messages: [{
-            role: "user",
-            content: `Analiza esta situación financiera de PORTAWARE (fabricante de artículos de plástico para el hogar) y proporciona un análisis ejecutivo conciso (máximo 150 palabras):
-
-Ventas Netas: ${ventasNetas.toLocaleString()}
-Costo (${pctCosto}%): ${calculos.costo.toLocaleString()}
-Margen Bruto: ${calculos.margenBruto.toLocaleString()} (${calculos.margenBrutoPct.toFixed(1)}%)
-Gastos Totales: ${calculos.gastoTotal.toLocaleString()}
-- Nómina: ${nomina.toLocaleString()}
-- Comisiones (${pctComisiones}%): ${calculos.comisiones.toLocaleString()}
-- Fletes (${pctFletes}%): ${calculos.fletes.toLocaleString()}
-- Rentas: ${rentas.toLocaleString()}
-- Otros: ${otrosGastos.toLocaleString()}
-EBITDA Operativo: ${calculos.ebitdaOperativo.toLocaleString()}
-Gastos Financieros (${pctGastosFinancieros}%): ${calculos.gastosFinancieros.toLocaleString()}
-EBITDA Final: ${calculos.ebitda.toLocaleString()} (${calculos.margenEbitdaPct.toFixed(1)}%)
-Punto de Equilibrio: ${calculos.puntoEquilibrio.toLocaleString()}
-
-Proporciona: 1) Diagnóstico de salud financiera, 2) 2-3 recomendaciones específicas para mejorar rentabilidad, 3) Análisis del punto de equilibrio.`
-          }]
-        })
-      });
-
-      const data = await response.json();
-      const texto = data.content.find(item => item.type === "text")?.text || "No se pudo generar el análisis";
-      setAnalisisIA(texto);
-    } catch (error) {
-      setAnalisisIA(`Error al generar análisis: ${error.message}`);
-    } finally {
-      setCargandoIA(false);
+        'costo': costo,
+        'margen_bruto': margen_bruto,
+        'comisiones': comisiones,
+        'fletes': fletes,
+        'gasto_total': gasto_total,
+        'ebitda_operativo': ebitda_operativo,
+        'gastos_financieros': gastos_financieros,
+        'ebitda': ebitda,
+        'margen_bruto_pct': margen_bruto_pct,
+        'margen_ebitda_pct': margen_ebitda_pct,
+        'punto_equilibrio': punto_equilibrio
     }
-  };
 
-  // Escenarios predefinidos
-  const aplicarEscenario = (tipo) => {
-    switch(tipo) {
-      case 'optimista':
-        setVentasNetas(189878959 * 1.15);
-        setPctCosto(45);
-        setPctFletes(5.5);
-        setPctGastosFinancieros(0.8);
-        break;
-      case 'conservador':
-        setVentasNetas(189878959 * 0.95);
-        setPctCosto(48);
-        setPctFletes(6.5);
-        break;
-      case 'equilibrio':
-        setVentasNetas(calculos.puntoEquilibrio);
-        break;
-      case 'reset':
-        setVentasNetas(189878959);
-        setPctCosto(47);
-        setNomina(25800000);
-        setPctComisiones(3);
-        setPctFletes(6);
-        setRentas(6711000);
-        setOtrosGastos(5446936);
-        setPctGastosFinancieros(1);
-        break;
-    }
-  };
+def generar_analisis_ia(datos, calculos):
+    """Genera análisis con IA de Gemini"""
+    if not GEMINI_AVAILABLE:
+        return "⚠️ La API de Gemini no está configurada. Configura GEMINI_API_KEY en los secrets de Streamlit."
+    
+    prompt = f"""Analiza esta situación financiera de PORTAWARE (fabricante de artículos de plástico para el hogar) y proporciona un análisis ejecutivo conciso (máximo 150 palabras):
 
-  // Datos para gráficos
-  const datosWaterfall = [
-    { name: 'Ventas Netas', valor: ventasNetas, color: '#1F77B4' },
-    { name: 'Costo', valor: -calculos.costo, color: '#DC3545' },
-    { name: 'Margen Bruto', valor: calculos.margenBruto, color: '#28A745' },
-    { name: 'Gastos', valor: -calculos.gastoTotal, color: '#FD7E14' },
-    { name: 'EBITDA Op.', valor: calculos.ebitdaOperativo, color: '#6F42C1' },
-    { name: 'G. Financieros', valor: -calculos.gastosFinancieros, color: '#DC3545' },
-    { name: 'EBITDA', valor: calculos.ebitda, color: '#28A745' }
-  ];
+Ventas Netas: ${datos['ventas_netas']:,.0f}
+Costo ({datos['pct_costo']}%): ${calculos['costo']:,.0f}
+Margen Bruto: ${calculos['margen_bruto']:,.0f} ({calculos['margen_bruto_pct']:.1f}%)
+Gastos Totales: ${calculos['gasto_total']:,.0f}
+- Nómina: ${datos['nomina']:,.0f}
+- Comisiones ({datos['pct_comisiones']}%): ${calculos['comisiones']:,.0f}
+- Fletes ({datos['pct_fletes']}%): ${calculos['fletes']:,.0f}
+- Rentas: ${datos['rentas']:,.0f}
+- Otros: ${datos['otros_gastos']:,.0f}
+EBITDA Operativo: ${calculos['ebitda_operativo']:,.0f}
+Gastos Financieros ({datos['pct_gastos_financieros']}%): ${calculos['gastos_financieros']:,.0f}
+EBITDA Final: ${calculos['ebitda']:,.0f} ({calculos['margen_ebitda_pct']:.1f}%)
+Punto de Equilibrio: ${calculos['punto_equilibrio']:,.0f}
 
-  const datosGastos = [
-    { name: 'Nómina', value: nomina, color: '#1F77B4' },
-    { name: 'Comisiones', value: calculos.comisiones, color: '#FF7F0E' },
-    { name: 'Fletes', value: calculos.fletes, color: '#2CA02C' },
-    { name: 'Rentas', value: rentas, color: '#D62728' },
-    { name: 'Otros', value: otrosGastos, color: '#9467BD' }
-  ];
+Proporciona: 1) Diagnóstico de salud financiera, 2) 2-3 recomendaciones específicas para mejorar rentabilidad, 3) Análisis del punto de equilibrio."""
+    
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"❌ Error al generar análisis: {str(e)}"
 
-  const formatMoney = (val) => `$${(val / 1000000).toFixed(1)}M`;
+def aplicar_escenario(tipo):
+    """Aplica escenarios predefinidos"""
+    if tipo == 'optimista':
+        st.session_state.ventas_netas = 189878959 * 1.15
+        st.session_state.pct_costo = 45.0
+        st.session_state.pct_fletes = 5.5
+        st.session_state.pct_gastos_financieros = 0.8
+    elif tipo == 'conservador':
+        st.session_state.ventas_netas = 189878959 * 0.95
+        st.session_state.pct_costo = 48.0
+        st.session_state.pct_fletes = 6.5
+    elif tipo == 'equilibrio':
+        calculos_temp = calcular_financieros(
+            st.session_state.ventas_netas,
+            st.session_state.pct_costo,
+            st.session_state.nomina,
+            st.session_state.pct_comisiones,
+            st.session_state.pct_fletes,
+            st.session_state.rentas,
+            st.session_state.otros_gastos,
+            st.session_state.pct_gastos_financieros
+        )
+        st.session_state.ventas_netas = calculos_temp['punto_equilibrio']
+    elif tipo == 'reset':
+        st.session_state.ventas_netas = 189878959
+        st.session_state.pct_costo = 47.0
+        st.session_state.nomina = 25800000
+        st.session_state.pct_comisiones = 3.0
+        st.session_state.pct_fletes = 6.0
+        st.session_state.rentas = 6711000
+        st.session_state.otros_gastos = 5446936
+        st.session_state.pct_gastos_financieros = 1.0
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">Simulador Financiero PORTAWARE</h1>
-              <p className="text-gray-600">Análisis simplificado con IA integrada</p>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => aplicarEscenario('optimista')} className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition">
-                📈 Optimista
-              </button>
-              <button onClick={() => aplicarEscenario('conservador')} className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition">
-                📉 Conservador
-              </button>
-              <button onClick={() => aplicarEscenario('equilibrio')} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">
-                ⚖️ Equilibrio
-              </button>
-              <button onClick={() => aplicarEscenario('reset')} className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition">
-                🔄 Reset
-              </button>
-            </div>
-          </div>
-        </div>
+# --- INICIALIZAR SESSION STATE ---
+if 'ventas_netas' not in st.session_state:
+    st.session_state.ventas_netas = 189878959
+if 'pct_costo' not in st.session_state:
+    st.session_state.pct_costo = 47.0
+if 'nomina' not in st.session_state:
+    st.session_state.nomina = 25800000
+if 'pct_comisiones' not in st.session_state:
+    st.session_state.pct_comisiones = 3.0
+if 'pct_fletes' not in st.session_state:
+    st.session_state.pct_fletes = 6.0
+if 'rentas' not in st.session_state:
+    st.session_state.rentas = 6711000
+if 'otros_gastos' not in st.session_state:
+    st.session_state.otros_gastos = 5446936
+if 'pct_gastos_financieros' not in st.session_state:
+    st.session_state.pct_gastos_financieros = 1.0
 
-        {/* Métricas Clave */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Ventas Netas</span>
-              <DollarSign className="text-blue-500" size={20} />
-            </div>
-            <div className="text-2xl font-bold text-gray-800">{formatMoney(ventasNetas)}</div>
-            <div className="text-xs text-gray-500 mt-1">Base de ingresos</div>
-          </div>
+# --- CALCULAR VALORES ACTUALES ---
+calculos = calcular_financieros(
+    st.session_state.ventas_netas,
+    st.session_state.pct_costo,
+    st.session_state.nomina,
+    st.session_state.pct_comisiones,
+    st.session_state.pct_fletes,
+    st.session_state.rentas,
+    st.session_state.otros_gastos,
+    st.session_state.pct_gastos_financieros
+)
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Margen Bruto</span>
-              <TrendingUp className="text-green-500" size={20} />
-            </div>
-            <div className="text-2xl font-bold text-green-600">{calculos.margenBrutoPct.toFixed(1)}%</div>
-            <div className="text-xs text-gray-500 mt-1">{formatMoney(calculos.margenBruto)}</div>
-          </div>
+# --- INTERFAZ DE USUARIO ---
+st.title('📊 Simulador Financiero PORTAWARE')
+st.caption('Análisis simplificado con IA integrada')
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">EBITDA</span>
-              <Target className="text-purple-500" size={20} />
-            </div>
-            <div className="text-2xl font-bold text-purple-600">{calculos.margenEbitdaPct.toFixed(1)}%</div>
-            <div className="text-xs text-gray-500 mt-1">{formatMoney(calculos.ebitda)}</div>
-          </div>
+# Header con botones de escenarios
+col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns(5)
+with col_h1:
+    if st.button('📈 Escenario Optimista', use_container_width=True):
+        aplicar_escenario('optimista')
+        st.rerun()
+with col_h2:
+    if st.button('📉 Escenario Conservador', use_container_width=True):
+        aplicar_escenario('conservador')
+        st.rerun()
+with col_h3:
+    if st.button('⚖️ Punto de Equilibrio', use_container_width=True):
+        aplicar_escenario('equilibrio')
+        st.rerun()
+with col_h4:
+    if st.button('🔄 Reset', use_container_width=True):
+        aplicar_escenario('reset')
+        st.rerun()
+with col_h5:
+    estado_ia = '✅ IA Activa' if GEMINI_AVAILABLE else '❌ IA Inactiva'
+    st.markdown(f"**{estado_ia}**")
 
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600 text-sm">Punto Equilibrio</span>
-              <Zap className="text-orange-500" size={20} />
-            </div>
-            <div className="text-2xl font-bold text-orange-600">{formatMoney(calculos.puntoEquilibrio)}</div>
-            <div className={`text-xs mt-1 ${ventasNetas > calculos.puntoEquilibrio ? 'text-green-600' : 'text-red-600'}`}>
-              {ventasNetas > calculos.puntoEquilibrio ? '✓ Por encima' : '✗ Por debajo'}
-            </div>
-          </div>
-        </div>
+st.markdown("---")
 
-        <div className="grid grid-cols-3 gap-6">
-          {/* Panel de Controles */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">🎛️ Controles de Simulación</h2>
-            
-            <div className="space-y-4">
-              {/* Ventas Netas */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Ventas Netas</label>
-                <input
-                  type="number"
-                  value={ventasNetas}
-                  onChange={(e) => setVentasNetas(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="text-xs text-gray-500">{formatMoney(ventasNetas)}</span>
-              </div>
+# Métricas principales
+col1, col2, col3, col4 = st.columns(4)
 
-              {/* % Costo */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">% Costo de Ventas</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="30"
-                    max="70"
-                    step="0.5"
-                    value={pctCosto}
-                    onChange={(e) => setPctCosto(Number(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span className="text-sm font-bold text-blue-600 w-12">{pctCosto}%</span>
-                </div>
-                <span className="text-xs text-gray-500">{formatMoney(calculos.costo)}</span>
-              </div>
+with col1:
+    st.metric(
+        "💰 Ventas Netas",
+        f"${st.session_state.ventas_netas/1_000_000:.1f}M",
+        help="Ingresos totales de la empresa"
+    )
 
-              {/* Nómina */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Nómina</label>
-                <input
-                  type="number"
-                  value={nomina}
-                  onChange={(e) => setNomina(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="text-xs text-gray-500">{formatMoney(nomina)}</span>
-              </div>
+with col2:
+    st.metric(
+        "📊 Margen Bruto",
+        f"{calculos['margen_bruto_pct']:.1f}%",
+        f"${calculos['margen_bruto']/1_000_000:.1f}M",
+        delta_color="normal"
+    )
 
-              {/* % Comisiones */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">% Comisiones</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="0"
-                    max="10"
-                    step="0.25"
-                    value={pctComisiones}
-                    onChange={(e) => setPctComisiones(Number(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span className="text-sm font-bold text-blue-600 w-12">{pctComisiones}%</span>
-                </div>
-                <span className="text-xs text-gray-500">{formatMoney(calculos.comisiones)}</span>
-              </div>
+with col3:
+    st.metric(
+        "🎯 EBITDA",
+        f"{calculos['margen_ebitda_pct']:.1f}%",
+        f"${calculos['ebitda']/1_000_000:.1f}M",
+        delta_color="normal"
+    )
 
-              {/* % Fletes */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">% Fletes</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="0"
-                    max="15"
-                    step="0.25"
-                    value={pctFletes}
-                    onChange={(e) => setPctFletes(Number(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span className="text-sm font-bold text-blue-600 w-12">{pctFletes}%</span>
-                </div>
-                <span className="text-xs text-gray-500">{formatMoney(calculos.fletes)}</span>
-              </div>
+with col4:
+    por_encima = st.session_state.ventas_netas > calculos['punto_equilibrio']
+    st.metric(
+        "⚡ Punto Equilibrio",
+        f"${calculos['punto_equilibrio']/1_000_000:.1f}M",
+        "✓ Por encima" if por_encima else "✗ Por debajo",
+        delta_color="normal" if por_encima else "inverse"
+    )
 
-              {/* Rentas */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Rentas</label>
-                <input
-                  type="number"
-                  value={rentas}
-                  onChange={(e) => setRentas(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="text-xs text-gray-500">{formatMoney(rentas)}</span>
-              </div>
+st.markdown("---")
 
-              {/* Otros Gastos */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Otros Gastos</label>
-                <input
-                  type="number"
-                  value={otrosGastos}
-                  onChange={(e) => setOtrosGastos(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="text-xs text-gray-500">{formatMoney(otrosGastos)}</span>
-              </div>
+# Layout principal: Controles + Visualizaciones
+col_controles, col_visuales = st.columns([1, 2])
 
-              {/* % Gastos Financieros */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">% Gastos Financieros</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="range"
-                    min="0"
-                    max="5"
-                    step="0.1"
-                    value={pctGastosFinancieros}
-                    onChange={(e) => setPctGastosFinancieros(Number(e.target.value))}
-                    className="flex-1"
-                  />
-                  <span className="text-sm font-bold text-blue-600 w-12">{pctGastosFinancieros}%</span>
-                </div>
-                <span className="text-xs text-gray-500">{formatMoney(calculos.gastosFinancieros)}</span>
-              </div>
-            </div>
-          </div>
+with col_controles:
+    st.subheader("🎛️ Controles de Simulación")
+    
+    with st.container():
+        st.markdown("##### 💰 Ingresos")
+        st.session_state.ventas_netas = st.number_input(
+            "Ventas Netas",
+            min_value=0,
+            value=st.session_state.ventas_netas,
+            step=1000000,
+            format="%.0f",
+            help="Ingresos totales"
+        )
+        st.caption(f"${st.session_state.ventas_netas:,.0f}")
+    
+    st.markdown("---")
+    
+    with st.container():
+        st.markdown("##### 🏭 Costos")
+        st.session_state.pct_costo = st.slider(
+            "% Costo de Ventas",
+            min_value=30.0,
+            max_value=70.0,
+            value=st.session_state.pct_costo,
+            step=0.5,
+            help="Porcentaje del costo sobre ventas netas"
+        )
+        st.caption(f"Costo: ${calculos['costo']:,.0f}")
+        st.caption(f"Margen Bruto: ${calculos['margen_bruto']:,.0f}")
+    
+    st.markdown("---")
+    
+    with st.container():
+        st.markdown("##### 💸 Gastos Operativos")
+        
+        st.session_state.nomina = st.number_input(
+            "Nómina",
+            min_value=0,
+            value=st.session_state.nomina,
+            step=100000,
+            format="%.0f"
+        )
+        st.caption(f"${st.session_state.nomina:,.0f}")
+        
+        st.session_state.pct_comisiones = st.slider(
+            "% Comisiones",
+            min_value=0.0,
+            max_value=10.0,
+            value=st.session_state.pct_comisiones,
+            step=0.25
+        )
+        st.caption(f"Comisiones: ${calculos['comisiones']:,.0f}")
+        
+        st.session_state.pct_fletes = st.slider(
+            "% Fletes",
+            min_value=0.0,
+            max_value=15.0,
+            value=st.session_state.pct_fletes,
+            step=0.25
+        )
+        st.caption(f"Fletes: ${calculos['fletes']:,.0f}")
+        
+        st.session_state.rentas = st.number_input(
+            "Rentas",
+            min_value=0,
+            value=st.session_state.rentas,
+            step=100000,
+            format="%.0f"
+        )
+        st.caption(f"${st.session_state.rentas:,.0f}")
+        
+        st.session_state.otros_gastos = st.number_input(
+            "Otros Gastos",
+            min_value=0,
+            value=st.session_state.otros_gastos,
+            step=100000,
+            format="%.0f"
+        )
+        st.caption(f"${st.session_state.otros_gastos:,.0f}")
+        
+        st.markdown(f"**Gasto Total: ${calculos['gasto_total']:,.0f}**")
+    
+    st.markdown("---")
+    
+    with st.container():
+        st.markdown("##### 🏦 Financieros")
+        st.session_state.pct_gastos_financieros = st.slider(
+            "% Gastos Financieros",
+            min_value=0.0,
+            max_value=5.0,
+            value=st.session_state.pct_gastos_financieros,
+            step=0.1
+        )
+        st.caption(f"Gastos Financieros: ${calculos['gastos_financieros']:,.0f}")
 
-          {/* Gráficos y Análisis */}
-          <div className="col-span-2 space-y-6">
-            {/* Puente de Utilidad */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">📊 Puente de Utilidad</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={datosWaterfall}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                  <YAxis tickFormatter={(val) => formatMoney(val)} />
-                  <Tooltip formatter={(val) => formatMoney(val)} />
-                  <Bar dataKey="valor">
-                    {datosWaterfall.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+with col_visuales:
+    # Gráfico de Puente de Utilidad
+    st.subheader("📊 Puente de Utilidad")
+    
+    datos_waterfall = [
+        dict(name='Ventas Netas', y=st.session_state.ventas_netas, color=COLORES['principal']),
+        dict(name='Costo', y=-calculos['costo'], color=COLORES['negativo']),
+        dict(name='Margen Bruto', y=calculos['margen_bruto'], color=COLORES['positivo']),
+        dict(name='Gastos Op.', y=-calculos['gasto_total'], color=COLORES['secundario']),
+        dict(name='EBITDA Op.', y=calculos['ebitda_operativo'], color=COLORES['terciario']),
+        dict(name='G. Financieros', y=-calculos['gastos_financieros'], color=COLORES['negativo']),
+        dict(name='EBITDA', y=calculos['ebitda'], color=COLORES['positivo'])
+    ]
+    
+    fig_waterfall = go.Figure()
+    
+    for dato in datos_waterfall:
+        fig_waterfall.add_trace(go.Bar(
+            name=dato['name'],
+            x=[dato['name']],
+            y=[dato['y']],
+            marker_color=dato['color'],
+            text=[f"${dato['y']/1_000_000:.1f}M"],
+            textposition='outside'
+        ))
+    
+    fig_waterfall.update_layout(
+        showlegend=False,
+        height=400,
+        margin=dict(l=20, r=20, t=20, b=80),
+        xaxis_tickangle=-45
+    )
+    
+    st.plotly_chart(fig_waterfall, use_container_width=True)
+    
+    # Gráfico de Composición de Gastos
+    st.subheader("🥧 Composición de Gastos Operativos")
+    
+    datos_gastos = [
+        dict(name='Nómina', value=st.session_state.nomina),
+        dict(name='Comisiones', value=calculos['comisiones']),
+        dict(name='Fletes', value=calculos['fletes']),
+        dict(name='Rentas', value=st.session_state.rentas),
+        dict(name='Otros', value=st.session_state.otros_gastos)
+    ]
+    
+    fig_pie = go.Figure(data=[go.Pie(
+        labels=[d['name'] for d in datos_gastos],
+        values=[d['value'] for d in datos_gastos],
+        hole=0.4,
+        marker_colors=[COLORES['principal'], COLORES['secundario'], COLORES['terciario'], 
+                      COLORES['cuaternario'], COLORES['quinario']]
+    )])
+    
+    fig_pie.update_layout(
+        height=400,
+        margin=dict(l=20, r=20, t=20, b=20)
+    )
+    
+    st.plotly_chart(fig_pie, use_container_width=True)
 
-            {/* Composición de Gastos */}
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h3 className="text-lg font-bold text-gray-800 mb-4">🥧 Composición de Gastos</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={datosGastos}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {datosGastos.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(val) => formatMoney(val)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+st.markdown("---")
 
-            {/* Análisis IA */}
-            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-800">🤖 Análisis Estratégico con IA</h3>
-                <button
-                  onClick={generarAnalisisIA}
-                  disabled={cargandoIA}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:bg-gray-400"
-                >
-                  {cargandoIA ? '⏳ Analizando...' : '🚀 Generar Análisis'}
-                </button>
-              </div>
-              {analisisIA && (
-                <div className="bg-white rounded-lg p-4 text-gray-700 whitespace-pre-line">
-                  {analisisIA}
-                </div>
-              )}
-              {!analisisIA && !cargandoIA && (
-                <div className="text-gray-500 text-center py-8">
-                  Haz clic en "Generar Análisis" para obtener recomendaciones estratégicas con IA
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+# Sección de Análisis IA
+st.subheader("🤖 Análisis Estratégico con IA")
 
-export default SimuladorFinanciero;
+col_ia1, col_ia2 = st.columns([3, 1])
+
+with col_ia2:
+    if st.button("🚀 Generar Análisis Estratégico", use_container_width=True, type="primary"):
+        with st.spinner("🧠 Analizando con IA..."):
+            datos_para_ia = {
+                'ventas_netas': st.session_state.ventas_netas,
+                'pct_costo': st.session_state.pct_costo,
+                'nomina': st.session_state.nomina,
+                'pct_comisiones': st.session_state.pct_comisiones,
+                'pct_fletes': st.session_state.pct_fletes,
+                'rentas': st.session_state.rentas,
+                'otros_gastos': st.session_state.otros_gastos,
+                'pct_gastos_financieros': st.session_state.pct_gastos_financieros
+            }
+            st.session_state.analisis_ia = generar_analisis_ia(datos_para_ia, calculos)
+
+with col_ia1:
+    if 'analisis_ia' in st.session_state:
+        st.info(st.session_state.analisis_ia)
+    else:
+        st.info("👆 Haz clic en 'Generar Análisis Estratégico' para obtener recomendaciones con IA")
+
+# Footer
+st.markdown("---")
+st.caption(f"Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
