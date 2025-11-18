@@ -14,9 +14,14 @@ st.set_page_config(
 # Configuración de Gemini AI
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    # Verificar modelos disponibles
+    models = genai.list_models()
+    available_models = [model.name for model in models]
+    st.session_state.available_models = available_models
     GEMINI_AVAILABLE = True
-except (FileNotFoundError, KeyError):
+except (FileNotFoundError, KeyError, Exception) as e:
     GEMINI_AVAILABLE = False
+    st.session_state.available_models = []
 
 # Paleta de colores
 COLORES = {
@@ -44,16 +49,6 @@ def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fl
     margen_bruto_pct = (margen_bruto / ventas_netas) * 100 if ventas_netas != 0 else 0
     margen_ebitda_pct = (ebitda / ventas_netas) * 100 if ventas_netas != 0 else 0
     
-    # Punto de equilibrio mejorado - ventas mínimas para EBITDA aceptable
-    gastos_fijos = nomina + rentas + otros_gastos
-    gastos_variables_pct = pct_costo + pct_comisiones + pct_fletes + pct_gastos_financieros
-    margen_contribucion_pct = 100 - gastos_variables_pct
-    
-    if margen_contribucion_pct > 0:
-        punto_equilibrio = gastos_fijos / (margen_contribucion_pct / 100)
-    else:
-        punto_equilibrio = 0
-    
     return {
         'costo': costo,
         'margen_bruto': margen_bruto,
@@ -64,8 +59,7 @@ def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fl
         'gastos_financieros': gastos_financieros,
         'ebitda': ebitda,
         'margen_bruto_pct': margen_bruto_pct,
-        'margen_ebitda_pct': margen_ebitda_pct,
-        'punto_equilibrio': punto_equilibrio
+        'margen_ebitda_pct': margen_ebitda_pct
     }
 
 def generar_analisis_ia(datos, calculos):
@@ -87,15 +81,33 @@ Gastos Totales: ${calculos['gasto_total']:,.0f}
 EBITDA Operativo: ${calculos['ebitda_operativo']:,.0f}
 Gastos Financieros ({datos['pct_gastos_financieros']}%): ${calculos['gastos_financieros']:,.0f}
 EBITDA Final: ${calculos['ebitda']:,.0f} ({calculos['margen_ebitda_pct']:.1f}%)
-Punto de Equilibrio: ${calculos['punto_equilibrio']:,.0f}
 
-Proporciona: 1) Diagnóstico de salud financiera, 2) 2-3 recomendaciones específicas para mejorar rentabilidad, 3) Análisis del punto de equilibrio."""
+Proporciona: 1) Diagnóstico de salud financiera, 2) 2-3 recomendaciones específicas para mejorar rentabilidad."""
     
     try:
-        # Usar modelo disponible - corregir el nombre del modelo
-        model = genai.GenerativeModel('gemini-pro')
-        response = model.generate_content(prompt)
-        return response.text
+        # Probar con modelos disponibles
+        modelos_disponibles = st.session_state.available_models
+        modelo_usar = None
+        
+        # Priorizar modelos conocidos
+        for modelo in modelos_disponibles:
+            if 'gemini-1.5' in modelo and 'flash' in modelo:
+                modelo_usar = modelo
+                break
+            elif 'gemini-1.0' in modelo and 'pro' in modelo:
+                modelo_usar = modelo
+                break
+            elif 'gemini-pro' in modelo:
+                modelo_usar = modelo
+                break
+        
+        if modelo_usar:
+            model = genai.GenerativeModel(modelo_usar.split('/')[-1])
+            response = model.generate_content(prompt)
+            return response.text
+        else:
+            return "ℹ️ No se encontraron modelos de Gemini disponibles. Verifica tu configuración de API."
+            
     except Exception as e:
         return f"❌ Error al generar análisis: {str(e)}"
 
@@ -110,18 +122,6 @@ def aplicar_escenario(tipo):
         st.session_state.ventas_netas = 189878959 * 0.95
         st.session_state.pct_costo = 48.0
         st.session_state.pct_fletes = 6.5
-    elif tipo == 'equilibrio':
-        calculos_temp = calcular_financieros(
-            st.session_state.ventas_netas,
-            st.session_state.pct_costo,
-            st.session_state.nomina,
-            st.session_state.pct_comisiones,
-            st.session_state.pct_fletes,
-            st.session_state.rentas,
-            st.session_state.otros_gastos,
-            st.session_state.pct_gastos_financieros
-        )
-        st.session_state.ventas_netas = calculos_temp['punto_equilibrio']
     elif tipo == 'reset':
         st.session_state.ventas_netas = 189878959
         st.session_state.pct_costo = 47.0
@@ -133,33 +133,31 @@ def aplicar_escenario(tipo):
         st.session_state.pct_gastos_financieros = 1.0
 
 # --- INICIALIZAR SESSION STATE ---
-if 'ventas_netas' not in st.session_state:
-    st.session_state.ventas_netas = 189878959
-if 'pct_costo' not in st.session_state:
-    st.session_state.pct_costo = 47.0
-if 'nomina' not in st.session_state:
-    st.session_state.nomina = 25800000
-if 'pct_comisiones' not in st.session_state:
-    st.session_state.pct_comisiones = 3.0
-if 'pct_fletes' not in st.session_state:
-    st.session_state.pct_fletes = 6.0
-if 'rentas' not in st.session_state:
-    st.session_state.rentas = 6711000
-if 'otros_gastos' not in st.session_state:
-    st.session_state.otros_gastos = 5446936
-if 'pct_gastos_financieros' not in st.session_state:
-    st.session_state.pct_gastos_financieros = 1.0
+valores_por_defecto = {
+    'ventas_netas': 189878959,
+    'pct_costo': 47.0,
+    'nomina': 25800000,
+    'pct_comisiones': 3.0,
+    'pct_fletes': 6.0,
+    'rentas': 6711000,
+    'otros_gastos': 5446936,
+    'pct_gastos_financieros': 1.0
+}
+
+for key, value in valores_por_defecto.items():
+    if key not in st.session_state:
+        st.session_state[key] = value
 
 # --- CALCULAR VALORES ACTUALES ---
 calculos = calcular_financieros(
-    st.session_state.ventas_netas,
-    st.session_state.pct_costo,
-    st.session_state.nomina,
-    st.session_state.pct_comisiones,
-    st.session_state.pct_fletes,
-    st.session_state.rentas,
-    st.session_state.otros_gastos,
-    st.session_state.pct_gastos_financieros
+    float(st.session_state.ventas_netas),
+    float(st.session_state.pct_costo),
+    float(st.session_state.nomina),
+    float(st.session_state.pct_comisiones),
+    float(st.session_state.pct_fletes),
+    float(st.session_state.rentas),
+    float(st.session_state.otros_gastos),
+    float(st.session_state.pct_gastos_financieros)
 )
 
 # --- INTERFAZ DE USUARIO ---
@@ -167,7 +165,7 @@ st.title('📊 Simulador Financiero PORTAWARE')
 st.caption('Análisis simplificado con IA integrada')
 
 # Header con botones de escenarios
-col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns(5)
+col_h1, col_h2, col_h3, col_h4 = st.columns(4)
 with col_h1:
     if st.button('📈 Escenario Optimista', use_container_width=True):
         aplicar_escenario('optimista')
@@ -177,26 +175,22 @@ with col_h2:
         aplicar_escenario('conservador')
         st.rerun()
 with col_h3:
-    if st.button('⚖️ Punto de Equilibrio', use_container_width=True):
-        aplicar_escenario('equilibrio')
-        st.rerun()
-with col_h4:
-    if st.button('🔄 Reset', use_container_width=True):
+    if st.button('🔄 Valores Originales', use_container_width=True):
         aplicar_escenario('reset')
         st.rerun()
-with col_h5:
+with col_h4:
     estado_ia = '✅ IA Activa' if GEMINI_AVAILABLE else '❌ IA Inactiva'
     st.markdown(f"**{estado_ia}**")
 
 st.markdown("---")
 
 # Métricas principales
-col1, col2, col3, col4 = st.columns(4)
+col1, col2, col3 = st.columns(3)
 
 with col1:
     st.metric(
         "💰 Ventas Netas",
-        f"${st.session_state.ventas_netas/1_000_000:.1f}M",
+        f"${float(st.session_state.ventas_netas)/1_000_000:.1f}M",
         help="Ingresos totales de la empresa"
     )
 
@@ -211,18 +205,9 @@ with col2:
 with col3:
     st.metric(
         "🎯 EBITDA",
-        f"${calculos['ebitda']/1_000_000:.1f}M",
         f"{calculos['margen_ebitda_pct']:.1f}%",
+        f"${calculos['ebitda']/1_000_000:.1f}M",
         delta_color="normal"
-    )
-
-with col4:
-    por_encima = st.session_state.ventas_netas > calculos['punto_equilibrio']
-    st.metric(
-        "⚡ Punto Equilibrio",
-        f"${calculos['punto_equilibrio']/1_000_000:.1f}M",
-        "✓ Por encima" if por_encima else "✗ Por debajo",
-        delta_color="normal" if por_encima else "inverse"
     )
 
 st.markdown("---")
@@ -236,14 +221,14 @@ with col_controles:
     with st.container():
         st.markdown("##### 💰 Ingresos")
         st.session_state.ventas_netas = st.number_input(
-            "Ventas Netas",
-            min_value=0,
-            value=st.session_state.ventas_netas,
-            step=1000000,
-            format="%.0f",
+            "Ventas Netas ($)",
+            min_value=0.0,
+            value=float(st.session_state.ventas_netas),
+            step=1000000.0,
+            format="%f",
             help="Ingresos totales"
         )
-        st.caption(f"${st.session_state.ventas_netas:,.0f}")
+        st.caption(f"${float(st.session_state.ventas_netas):,.0f}")
     
     st.markdown("---")
     
@@ -253,7 +238,7 @@ with col_controles:
             "% Costo de Ventas",
             min_value=30.0,
             max_value=70.0,
-            value=st.session_state.pct_costo,
+            value=float(st.session_state.pct_costo),
             step=0.5,
             help="Porcentaje del costo sobre ventas netas"
         )
@@ -266,19 +251,19 @@ with col_controles:
         st.markdown("##### 💸 Gastos Operativos")
         
         st.session_state.nomina = st.number_input(
-            "Nómina",
-            min_value=0,
-            value=st.session_state.nomina,
-            step=100000,
-            format="%.0f"
+            "Nómina ($)",
+            min_value=0.0,
+            value=float(st.session_state.nomina),
+            step=100000.0,
+            format="%f"
         )
-        st.caption(f"${st.session_state.nomina:,.0f}")
+        st.caption(f"${float(st.session_state.nomina):,.0f}")
         
         st.session_state.pct_comisiones = st.slider(
             "% Comisiones",
             min_value=0.0,
             max_value=10.0,
-            value=st.session_state.pct_comisiones,
+            value=float(st.session_state.pct_comisiones),
             step=0.25
         )
         st.caption(f"Comisiones: ${calculos['comisiones']:,.0f}")
@@ -287,40 +272,40 @@ with col_controles:
             "% Fletes",
             min_value=0.0,
             max_value=15.0,
-            value=st.session_state.pct_fletes,
+            value=float(st.session_state.pct_fletes),
             step=0.25
         )
         st.caption(f"Fletes: ${calculos['fletes']:,.0f}")
         
         st.session_state.rentas = st.number_input(
-            "Rentas",
-            min_value=0,
-            value=st.session_state.rentas,
-            step=100000,
-            format="%.0f"
+            "Rentas ($)",
+            min_value=0.0,
+            value=float(st.session_state.rentas),
+            step=100000.0,
+            format="%f"
         )
-        st.caption(f"${st.session_state.rentas:,.0f}")
+        st.caption(f"${float(st.session_state.rentas):,.0f}")
         
         st.session_state.otros_gastos = st.number_input(
-            "Otros Gastos",
-            min_value=0,
-            value=st.session_state.otros_gastos,
-            step=100000,
-            format="%.0f"
+            "Otros Gastos ($)",
+            min_value=0.0,
+            value=float(st.session_state.otros_gastos),
+            step=100000.0,
+            format="%f"
         )
-        st.caption(f"${st.session_state.otros_gastos:,.0f}")
+        st.caption(f"${float(st.session_state.otros_gastos):,.0f}")
         
         st.markdown(f"**Gasto Total: ${calculos['gasto_total']:,.0f}**")
     
     st.markdown("---")
     
     with st.container():
-        st.markdown("##### 🏦 Financieros")
+        st.markdown("##### 🏦 Gastos Financieros")
         st.session_state.pct_gastos_financieros = st.slider(
             "% Gastos Financieros",
             min_value=0.0,
             max_value=5.0,
-            value=st.session_state.pct_gastos_financieros,
+            value=float(st.session_state.pct_gastos_financieros),
             step=0.1
         )
         st.caption(f"Gastos Financieros: ${calculos['gastos_financieros']:,.0f}")
@@ -331,23 +316,21 @@ with col_visuales:
     
     # Crear tabla de resultados
     datos_tabla = [
-        ["Ventas Netas", f"${st.session_state.ventas_netas:,.0f}", "100.0%"],
-        ["Costo de Ventas", f"${calculos['costo']:,.0f}", f"{st.session_state.pct_costo:.1f}%"],
-        ["Margen Bruto", f"${calculos['margen_bruto']:,.0f}", f"{calculos['margen_bruto_pct']:.1f}%"],
+        ["Ventas Netas", f"${float(st.session_state.ventas_netas):,.0f}", "100.0%"],
+        ["Costo de Ventas", f"${calculos['costo']:,.0f}", f"{float(st.session_state.pct_costo):.1f}%"],
+        ["**Margen Bruto**", f"**${calculos['margen_bruto']:,.0f}**", f"**{calculos['margen_bruto_pct']:.1f}%**"],
         ["", "", ""],
-        ["Gastos Operativos:", "", ""],
-        [" - Nómina", f"${st.session_state.nomina:,.0f}", f"{(st.session_state.nomina/st.session_state.ventas_netas)*100:.1f}%"],
-        [" - Comisiones", f"${calculos['comisiones']:,.0f}", f"{st.session_state.pct_comisiones:.1f}%"],
-        [" - Fletes", f"${calculos['fletes']:,.0f}", f"{st.session_state.pct_fletes:.1f}%"],
-        [" - Rentas", f"${st.session_state.rentas:,.0f}", f"{(st.session_state.rentas/st.session_state.ventas_netas)*100:.1f}%"],
-        [" - Otros Gastos", f"${st.session_state.otros_gastos:,.0f}", f"{(st.session_state.otros_gastos/st.session_state.ventas_netas)*100:.1f}%"],
-        ["Total Gastos Operativos", f"${calculos['gasto_total']:,.0f}", f"{(calculos['gasto_total']/st.session_state.ventas_netas)*100:.1f}%"],
+        ["**Gastos Operativos:**", "", ""],
+        [" - Nómina", f"${float(st.session_state.nomina):,.0f}", f"{(float(st.session_state.nomina)/float(st.session_state.ventas_netas))*100:.1f}%"],
+        [" - Comisiones", f"${calculos['comisiones']:,.0f}", f"{float(st.session_state.pct_comisiones):.1f}%"],
+        [" - Fletes", f"${calculos['fletes']:,.0f}", f"{float(st.session_state.pct_fletes):.1f}%"],
+        [" - Rentas", f"${float(st.session_state.rentas):,.0f}", f"{(float(st.session_state.rentas)/float(st.session_state.ventas_netas))*100:.1f}%"],
+        [" - Otros Gastos", f"${float(st.session_state.otros_gastos):,.0f}", f"{(float(st.session_state.otros_gastos)/float(st.session_state.ventas_netas))*100:.1f}%"],
+        ["**Total Gastos Operativos**", f"**${calculos['gasto_total']:,.0f}**", f"**{(calculos['gasto_total']/float(st.session_state.ventas_netas))*100:.1f}%**"],
         ["", "", ""],
-        ["EBITDA Operativo", f"${calculos['ebitda_operativo']:,.0f}", f"{(calculos['ebitda_operativo']/st.session_state.ventas_netas)*100:.1f}%"],
-        ["Gastos Financieros", f"${calculos['gastos_financieros']:,.0f}", f"{st.session_state.pct_gastos_financieros:.1f}%"],
-        ["EBITDA Final", f"${calculos['ebitda']:,.0f}", f"{calculos['margen_ebitda_pct']:.1f}%"],
-        ["", "", ""],
-        ["Punto de Equilibrio", f"${calculos['punto_equilibrio']:,.0f}", ""]
+        ["EBITDA Operativo", f"${calculos['ebitda_operativo']:,.0f}", f"{(calculos['ebitda_operativo']/float(st.session_state.ventas_netas))*100:.1f}%"],
+        ["Gastos Financieros", f"${calculos['gastos_financieros']:,.0f}", f"{float(st.session_state.pct_gastos_financieros):.1f}%"],
+        ["**EBITDA Final**", f"**${calculos['ebitda']:,.0f}**", f"**{calculos['margen_ebitda_pct']:.1f}%**"]
     ]
     
     # Crear tabla con Plotly
@@ -381,11 +364,11 @@ with col_visuales:
     st.subheader("🥧 Composición de Gastos Operativos")
     
     datos_gastos = [
-        dict(name='Nómina', value=st.session_state.nomina),
+        dict(name='Nómina', value=float(st.session_state.nomina)),
         dict(name='Comisiones', value=calculos['comisiones']),
         dict(name='Fletes', value=calculos['fletes']),
-        dict(name='Rentas', value=st.session_state.rentas),
-        dict(name='Otros', value=st.session_state.otros_gastos)
+        dict(name='Rentas', value=float(st.session_state.rentas)),
+        dict(name='Otros', value=float(st.session_state.otros_gastos))
     ]
     
     fig_pie = go.Figure(data=[go.Pie(
@@ -414,14 +397,14 @@ with col_ia2:
     if st.button("🚀 Generar Análisis Estratégico", use_container_width=True, type="primary"):
         with st.spinner("🧠 Analizando con IA..."):
             datos_para_ia = {
-                'ventas_netas': st.session_state.ventas_netas,
-                'pct_costo': st.session_state.pct_costo,
-                'nomina': st.session_state.nomina,
-                'pct_comisiones': st.session_state.pct_comisiones,
-                'pct_fletes': st.session_state.pct_fletes,
-                'rentas': st.session_state.rentas,
-                'otros_gastos': st.session_state.otros_gastos,
-                'pct_gastos_financieros': st.session_state.pct_gastos_financieros
+                'ventas_netas': float(st.session_state.ventas_netas),
+                'pct_costo': float(st.session_state.pct_costo),
+                'nomina': float(st.session_state.nomina),
+                'pct_comisiones': float(st.session_state.pct_comisiones),
+                'pct_fletes': float(st.session_state.pct_fletes),
+                'rentas': float(st.session_state.rentas),
+                'otros_gastos': float(st.session_state.otros_gastos),
+                'pct_gastos_financieros': float(st.session_state.pct_gastos_financieros)
             }
             st.session_state.analisis_ia = generar_analisis_ia(datos_para_ia, calculos)
 
@@ -430,6 +413,13 @@ with col_ia1:
         st.info(st.session_state.analisis_ia)
     else:
         st.info("👆 Haz clic en 'Generar Análisis Estratégico' para obtener recomendaciones con IA")
+
+# Información de modelos disponibles (para debugging)
+if GEMINI_AVAILABLE and st.session_state.available_models:
+    with st.expander("🔧 Información de Modelos Disponibles"):
+        st.write("Modelos encontrados:")
+        for modelo in st.session_state.available_models:
+            st.write(f"- {modelo}")
 
 # Footer
 st.markdown("---")
