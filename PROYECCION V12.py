@@ -5,21 +5,49 @@ from datetime import datetime
 
 # --- CONFIGURACIÓN INICIAL ---
 st.set_page_config(
-    page_title="Simulador Financiero PORTAWARE", 
+    page_title="PORTAWARE Financial Studio", 
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# Paleta de colores
+# Paleta de colores premium
 COLORES = {
-    'positivo': '#28A745',
-    'negativo': '#DC3545',
-    'principal': '#1F77B4',
-    'secundario': '#FF7F0E',
-    'terciario': '#2CA02C',
-    'cuaternario': '#D62728',
-    'quinario': '#9467BD'
+    'primary': '#1F3A5F',
+    'secondary': '#4FD1C5',
+    'accent': '#2D5B8F',
+    'success': '#48BB78',
+    'warning': '#ED8936',
+    'error': '#F56565',
+    'dark': '#2D3748',
+    'light': '#F7FAFC'
 }
+
+# Estilos CSS personalizados
+st.markdown(f"""
+<style>
+    .main .block-container {{
+        padding-top: 2rem;
+    }}
+    .metric-card {{
+        background: linear-gradient(135deg, {COLORES['primary']}, {COLORES['accent']});
+        padding: 1.5rem;
+        border-radius: 15px;
+        color: white;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }}
+    .control-panel {{
+        background-color: {COLORES['light']};
+        padding: 1.5rem;
+        border-radius: 15px;
+        border-left: 4px solid {COLORES['secondary']};
+    }}
+    .section-title {{
+        color: {COLORES['primary']};
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # --- FUNCIONES DE CÁLCULO ---
 def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fletes, rentas, otros_gastos, pct_gastos_financieros):
@@ -99,296 +127,261 @@ calculos = calcular_financieros(
 )
 
 # --- INTERFAZ DE USUARIO ---
-st.title('📊 Simulador Financiero PORTAWARE')
-st.caption('Análisis de rentabilidad y estructura de costos')
-
-# Header con botones de escenarios
-col_h1, col_h2, col_h3, col_h4 = st.columns(4)
-with col_h1:
-    if st.button('📈 Escenario Optimista', use_container_width=True):
-        aplicar_escenario('optimista')
-        st.rerun()
-with col_h2:
-    if st.button('📉 Escenario Conservador', use_container_width=True):
-        aplicar_escenario('conservador')
-        st.rerun()
-with col_h3:
-    if st.button('🔄 Valores Originales', use_container_width=True):
-        aplicar_escenario('reset')
-        st.rerun()
-with col_h4:
-    st.markdown("**💡 Simulador Activo**")
+# Header Premium
+col_logo, col_title, col_actions = st.columns([1, 2, 1])
+with col_logo:
+    st.markdown("### 🏢 PORTAWARE")
+with col_title:
+    st.markdown("<h1 style='text-align: center; color: #1F3A5F;'>Financial Performance Studio</h1>", unsafe_allow_html=True)
+with col_actions:
+    st.markdown("**💎 Professional Edition**")
 
 st.markdown("---")
 
-# Métricas principales
+# Métricas principales con diseño premium
+st.markdown("<div class='section-title'>PRINCIPALES INDICADORES</div>", unsafe_allow_html=True)
+
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.metric(
-        "💰 Ventas Netas",
-        f"${float(st.session_state.ventas_netas)/1_000_000:.1f}M",
-        help="Ingresos totales de la empresa"
-    )
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div style='font-size: 0.9rem; opacity: 0.9;'>VENTAS NETAS</div>
+        <div style='font-size: 2rem; font-weight: bold;'>${float(st.session_state.ventas_netas)/1_000_000:.1f}M</div>
+        <div style='font-size: 0.8rem; opacity: 0.8;'>Ingresos totales</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col2:
-    st.metric(
-        "📊 Margen Bruto",
-        f"{calculos['margen_bruto_pct']:.1f}%",
-        f"${calculos['margen_bruto']/1_000_000:.1f}M",
-        delta_color="normal"
-    )
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div style='font-size: 0.9rem; opacity: 0.9;'>MARGEN BRUTO</div>
+        <div style='font-size: 2rem; font-weight: bold;'>${calculos['margen_bruto']/1_000_000:.1f}M</div>
+        <div style='font-size: 1rem; opacity: 0.9;'>{calculos['margen_bruto_pct']:.1f}% del total</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col3:
-    st.metric(
-        "🎯 EBITDA",
-        f"${calculos['ebitda']/1_000_000:.1f}M",
-        f"{calculos['margen_ebitda_pct']:.1f}%",
-        delta_color="normal"
-    )
+    st.markdown(f"""
+    <div class='metric-card'>
+        <div style='font-size: 0.9rem; opacity: 0.9;'>EBITDA</div>
+        <div style='font-size: 2rem; font-weight: bold;'>${calculos['ebitda']/1_000_000:.1f}M</div>
+        <div style='font-size: 1rem; opacity: 0.9;'>{calculos['margen_ebitda_pct']:.1f}% del total</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# Layout principal: Controles + Visualizaciones
+# Controles de escenario
+st.markdown("<div class='section-title'>ESCENARIOS ESTRATÉGICOS</div>", unsafe_allow_html=True)
+
+sc1, sc2, sc3, sc4 = st.columns(4)
+with sc1:
+    if st.button('🚀 **Optimista**', use_container_width=True, type="primary"):
+        aplicar_escenario('optimista')
+        st.rerun()
+with sc2:
+    if st.button('🛡️ **Conservador**', use_container_width=True):
+        aplicar_escenario('conservador')
+        st.rerun()
+with sc3:
+    if st.button('⚡ **Valores Base**', use_container_width=True):
+        aplicar_escenario('reset')
+        st.rerun()
+with sc4:
+    st.info("💡 Ajusta los controles para simular")
+
+# Layout principal
 col_controles, col_visuales = st.columns([1, 2])
 
 with col_controles:
-    st.subheader("🎛️ Controles de Simulación")
+    st.markdown("<div class='section-title'>PANEL DE CONTROL</div>", unsafe_allow_html=True)
     
     with st.container():
+        st.markdown("<div class='control-panel'>", unsafe_allow_html=True)
+        
         st.markdown("##### 💰 Ingresos")
         st.session_state.ventas_netas = st.number_input(
-            "Ventas Netas ($)",
+            "Ventas Netas (USD)",
             min_value=0.0,
             value=float(st.session_state.ventas_netas),
             step=1000000.0,
             format="%f",
-            help="Ingresos totales"
+            help="Ingresos totales de la empresa"
         )
-        st.caption(f"${float(st.session_state.ventas_netas):,.0f}")
-    
-    st.markdown("---")
-    
-    with st.container():
-        st.markdown("##### 🏭 Costos")
+        st.caption(f"**${float(st.session_state.ventas_netas):,.0f}**")
+        
+        st.markdown("---")
+        
+        st.markdown("##### 🏭 Estructura de Costos")
         st.session_state.pct_costo = st.slider(
-            "% Costo de Ventas",
+            "Costo de Ventas (%)",
             min_value=30.0,
             max_value=70.0,
             value=float(st.session_state.pct_costo),
             step=0.5,
             help="Porcentaje del costo sobre ventas netas"
         )
-        st.caption(f"Costo: ${calculos['costo']:,.0f}")
-        st.caption(f"Margen Bruto: ${calculos['margen_bruto']:,.0f}")
-    
-    st.markdown("---")
-    
-    with st.container():
+        st.caption(f"Costo calculado: **${calculos['costo']:,.0f}**")
+        
+        st.markdown("---")
+        
         st.markdown("##### 💸 Gastos Operativos")
         
         st.session_state.nomina = st.number_input(
-            "Nómina ($)",
+            "Nómina (USD)",
             min_value=0.0,
             value=float(st.session_state.nomina),
             step=100000.0,
             format="%f"
         )
-        st.caption(f"${float(st.session_state.nomina):,.0f}")
         
         st.session_state.pct_comisiones = st.slider(
-            "% Comisiones",
+            "Comisiones (%)",
             min_value=0.0,
             max_value=10.0,
             value=float(st.session_state.pct_comisiones),
             step=0.25
         )
-        st.caption(f"Comisiones: ${calculos['comisiones']:,.0f}")
         
         st.session_state.pct_fletes = st.slider(
-            "% Fletes",
+            "Fletes (%)",
             min_value=0.0,
             max_value=15.0,
             value=float(st.session_state.pct_fletes),
             step=0.25
         )
-        st.caption(f"Fletes: ${calculos['fletes']:,.0f}")
         
         st.session_state.rentas = st.number_input(
-            "Rentas ($)",
+            "Rentas (USD)",
             min_value=0.0,
             value=float(st.session_state.rentas),
             step=100000.0,
             format="%f"
         )
-        st.caption(f"${float(st.session_state.rentas):,.0f}")
         
         st.session_state.otros_gastos = st.number_input(
-            "Otros Gastos ($)",
+            "Otros Gastos (USD)",
             min_value=0.0,
             value=float(st.session_state.otros_gastos),
             step=100000.0,
             format="%f"
         )
-        st.caption(f"${float(st.session_state.otros_gastos):,.0f}")
         
-        st.markdown(f"**Gasto Total: ${calculos['gasto_total']:,.0f}**")
-    
-    st.markdown("---")
-    
-    with st.container():
+        st.markdown(f"**Total Gastos: ${calculos['gasto_total']:,.0f}**")
+        
+        st.markdown("---")
+        
         st.markdown("##### 🏦 Gastos Financieros")
         st.session_state.pct_gastos_financieros = st.slider(
-            "% Gastos Financieros",
+            "Gastos Financieros (%)",
             min_value=0.0,
             max_value=5.0,
             value=float(st.session_state.pct_gastos_financieros),
             step=0.1
         )
-        st.caption(f"Gastos Financieros: ${calculos['gastos_financieros']:,.0f}")
+        
+        st.markdown("</div>", unsafe_allow_html=True)
 
 with col_visuales:
-    # Gráfico de Cascada (Waterfall)
-    st.subheader("📊 Análisis de Rentabilidad")
+    # Gráfico de Cascada Corregido
+    st.markdown("<div class='section-title'>ANÁLISIS DE RENTABILIDAD</div>", unsafe_allow_html=True)
+    
+    # Datos para el gráfico de cascada
+    categories = ['Ventas Netas', 'Costo de Ventas', 'Margen Bruto', 'Gastos Operativos', 'EBITDA Operativo', 'Gastos Financieros', 'EBITDA Final']
+    values = [
+        float(st.session_state.ventas_netas),
+        -calculos['costo'],
+        calculos['margen_bruto'],
+        -calculos['gasto_total'],
+        calculos['ebitda_operativo'],
+        -calculos['gastos_financieros'],
+        calculos['ebitda']
+    ]
+    
+    measures = ['absolute', 'relative', 'total', 'relative', 'total', 'relative', 'total']
     
     fig_waterfall = go.Figure(go.Waterfall(
-        name="Análisis de Rentabilidad",
+        name="",
         orientation="v",
-        measure=["absolute", "relative", "relative", "relative", "relative", "relative", "total"],
-        x=["Ventas Netas", "Costo de Ventas", "Margen Bruto", "Gastos Operativos", "EBITDA Operativo", "Gastos Financieros", "EBITDA Final"],
+        measure=measures,
+        x=categories,
+        y=values,
+        text=[f"${x/1_000_000:.1f}M" for x in values],
         textposition="outside",
-        text=[f"${float(st.session_state.ventas_netas)/1_000_000:.1f}M", 
-              f"-${calculos['costo']/1_000_000:.1f}M",
-              f"${calculos['margen_bruto']/1_000_000:.1f}M",
-              f"-${calculos['gasto_total']/1_000_000:.1f}M",
-              f"${calculos['ebitda_operativo']/1_000_000:.1f}M",
-              f"-${calculos['gastos_financieros']/1_000_000:.1f}M",
-              f"${calculos['ebitda']/1_000_000:.1f}M"],
-        y=[float(st.session_state.ventas_netas), 
-           -calculos['costo'],
-           calculos['margen_bruto'],
-           -calculos['gasto_total'],
-           calculos['ebitda_operativo'],
-           -calculos['gastos_financieros'],
-           calculos['ebitda']],
         connector={"line":{"color":"rgb(63, 63, 63)"}},
-        increasing={"marker":{"color":COLORES['positivo']}},
-        decreasing={"marker":{"color":COLORES['negativo']}},
-        totals={"marker":{"color":COLORES['principal']}}
+        increasing={"marker":{"color":COLORES['success']}},
+        decreasing={"marker":{"color":COLORES['error']}},
+        totals={"marker":{"color":COLORES['secondary']}}
     ))
-
+    
     fig_waterfall.update_layout(
         showlegend=False,
         height=400,
         margin=dict(l=50, r=50, t=50, b=100),
-        xaxis_tickangle=-45
+        xaxis_tickangle=-45,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color=COLORES['dark'])
     )
     
     st.plotly_chart(fig_waterfall, use_container_width=True)
     
-    # Tabla de resultados financieros
-    st.subheader("📋 Resumen Financiero Detallado")
+    # Tabla de resultados mejorada
+    st.markdown("<div class='section-title'>DETALLE FINANCIERO</div>", unsafe_allow_html=True)
     
-    # Crear tabla de resultados
+    # Crear tabla de resultados limpia
     datos_tabla = [
         ["Ventas Netas", f"${float(st.session_state.ventas_netas):,.0f}", "100.0%"],
         ["Costo de Ventas", f"${calculos['costo']:,.0f}", f"{float(st.session_state.pct_costo):.1f}%"],
-        ["**Margen Bruto**", f"**${calculos['margen_bruto']:,.0f}**", f"**{calculos['margen_bruto_pct']:.1f}%**"],
+        ["Margen Bruto", f"${calculos['margen_bruto']:,.0f}", f"{calculos['margen_bruto_pct']:.1f}%"],
         ["", "", ""],
-        ["**Gastos Operativos:**", "", ""],
-        [" - Nómina", f"${float(st.session_state.nomina):,.0f}", f"{(float(st.session_state.nomina)/float(st.session_state.ventas_netas))*100:.1f}%"],
-        [" - Comisiones", f"${calculos['comisiones']:,.0f}", f"{float(st.session_state.pct_comisiones):.1f}%"],
-        [" - Fletes", f"${calculos['fletes']:,.0f}", f"{float(st.session_state.pct_fletes):.1f}%"],
-        [" - Rentas", f"${float(st.session_state.rentas):,.0f}", f"{(float(st.session_state.rentas)/float(st.session_state.ventas_netas))*100:.1f}%"],
-        [" - Otros Gastos", f"${float(st.session_state.otros_gastos):,.0f}", f"{(float(st.session_state.otros_gastos)/float(st.session_state.ventas_netas))*100:.1f}%"],
-        ["**Total Gastos Operativos**", f"**${calculos['gasto_total']:,.0f}**", f"**{(calculos['gasto_total']/float(st.session_state.ventas_netas))*100:.1f}%**"],
+        ["GASTOS OPERATIVOS", "", ""],
+        ["Nómina", f"${float(st.session_state.nomina):,.0f}", f"{(float(st.session_state.nomina)/float(st.session_state.ventas_netas))*100:.1f}%"],
+        ["Comisiones", f"${calculos['comisiones']:,.0f}", f"{float(st.session_state.pct_comisiones):.1f}%"],
+        ["Fletes", f"${calculos['fletes']:,.0f}", f"{float(st.session_state.pct_fletes):.1f}%"],
+        ["Rentas", f"${float(st.session_state.rentas):,.0f}", f"{(float(st.session_state.rentas)/float(st.session_state.ventas_netas))*100:.1f}%"],
+        ["Otros Gastos", f"${float(st.session_state.otros_gastos):,.0f}", f"{(float(st.session_state.otros_gastos)/float(st.session_state.ventas_netas))*100:.1f}%"],
+        ["Total Gastos Operativos", f"${calculos['gasto_total']:,.0f}", f"{(calculos['gasto_total']/float(st.session_state.ventas_netas))*100:.1f}%"],
         ["", "", ""],
         ["EBITDA Operativo", f"${calculos['ebitda_operativo']:,.0f}", f"{(calculos['ebitda_operativo']/float(st.session_state.ventas_netas))*100:.1f}%"],
         ["Gastos Financieros", f"${calculos['gastos_financieros']:,.0f}", f"{float(st.session_state.pct_gastos_financieros):.1f}%"],
-        ["**EBITDA Final**", f"**${calculos['ebitda']:,.0f}**", f"**{calculos['margen_ebitda_pct']:.1f}%**"]
+        ["EBITDA Final", f"${calculos['ebitda']:,.0f}", f"{calculos['margen_ebitda_pct']:.1f}%"]
     ]
     
-    # Crear tabla con Plotly
+    # Crear tabla con diseño premium
     fig_tabla = go.Figure(data=[go.Table(
         columnwidth=[2, 1.5, 1],
         header=dict(
-            values=['<b>Concepto</b>', '<b>Monto</b>', '<b>%</b>'],
-            fill_color=COLORES['principal'],
+            values=['<b>CONCEPTO</b>', '<b>MONTO</b>', '<b>%</b>'],
+            fill_color=COLORES['primary'],
             align=['left', 'right', 'right'],
-            font=dict(color='white', size=12)
+            font=dict(color='white', size=12, family="Arial")
         ),
         cells=dict(
             values=[[fila[0] for fila in datos_tabla], 
                    [fila[1] for fila in datos_tabla], 
                    [fila[2] for fila in datos_tabla]],
             align=['left', 'right', 'right'],
-            fill_color=['white', 'white', 'white'],
-            font=dict(size=11),
-            height=25
+            fill_color=['white', '#F8FAFC', '#F8FAFC'],
+            font=dict(size=11, family="Arial"),
+            height=28
         )
     )])
     
     fig_tabla.update_layout(
-        height=400,
+        height=450,
         margin=dict(l=0, r=0, t=0, b=0)
     )
     
     st.plotly_chart(fig_tabla, use_container_width=True)
 
-st.markdown("---")
+# Gráfico de composición de gastos
+st.markdown("<div class='section-title'>COMPOSICIÓN DE GASTOS OPERATIVOS</div>", unsafe_allow_html=True)
 
-# Análisis de Sensibilidad
-st.subheader("📈 Análisis de Sensibilidad")
+col_pie1, col_pie2 = st.columns([2, 1])
 
-col_sens1, col_sens2 = st.columns(2)
-
-with col_sens1:
-    st.markdown("##### Impacto en EBITDA por Cambio en Ventas")
-    
-    # Simular cambios en ventas
-    ventas_base = float(st.session_state.ventas_netas)
-    cambios = [-20, -10, -5, 0, 5, 10, 20]
-    
-    datos_sensibilidad = []
-    for cambio in cambios:
-        ventas_simuladas = ventas_base * (1 + cambio/100)
-        calc_sens = calcular_financieros(
-            ventas_simuladas,
-            float(st.session_state.pct_costo),
-            float(st.session_state.nomina),
-            float(st.session_state.pct_comisiones),
-            float(st.session_state.pct_fletes),
-            float(st.session_state.rentas),
-            float(st.session_state.otros_gastos),
-            float(st.session_state.pct_gastos_financieros)
-        )
-        datos_sensibilidad.append({
-            'cambio_ventas': cambio,
-            'ebitda': calc_sens['ebitda'],
-            'margen': calc_sens['margen_ebitda_pct']
-        })
-    
-    fig_sens = go.Figure()
-    fig_sens.add_trace(go.Bar(
-        x=[f"{d['cambio_ventas']}%" for d in datos_sensibilidad],
-        y=[d['ebitda']/1_000_000 for d in datos_sensibilidad],
-        text=[f"${d['ebitda']/1_000_000:.1f}M<br>({d['margen']:.1f}%)" for d in datos_sensibilidad],
-        textposition='outside',
-        marker_color=COLORES['principal']
-    ))
-    
-    fig_sens.update_layout(
-        height=300,
-        showlegend=False,
-        xaxis_title="Cambio en Ventas",
-        yaxis_title="EBITDA (Millones USD)"
-    )
-    
-    st.plotly_chart(fig_sens, use_container_width=True)
-
-with col_sens2:
-    st.markdown("##### Composición de Gastos Operativos")
-    
+with col_pie1:
     datos_gastos = [
         dict(name='Nómina', value=float(st.session_state.nomina)),
         dict(name='Comisiones', value=calculos['comisiones']),
@@ -400,24 +393,50 @@ with col_sens2:
     fig_pie = go.Figure(data=[go.Pie(
         labels=[d['name'] for d in datos_gastos],
         values=[d['value'] for d in datos_gastos],
-        hole=0.4,
-        marker_colors=[COLORES['principal'], COLORES['secundario'], COLORES['terciario'], 
-                      COLORES['cuaternario'], COLORES['quinario']],
+        hole=0.5,
+        marker_colors=[COLORES['primary'], COLORES['secondary'], COLORES['accent'], 
+                      COLORES['success'], COLORES['warning']],
         textinfo='percent+label',
-        textposition='inside'
+        textposition='inside',
+        insidetextorientation='radial'
     )])
     
     fig_pie.update_layout(
         height=300,
         margin=dict(l=20, r=20, t=20, b=20),
-        showlegend=False
+        showlegend=False,
+        font=dict(size=12, family="Arial")
     )
     
     st.plotly_chart(fig_pie, use_container_width=True)
 
-# Footer
+with col_pie2:
+    st.markdown("""
+    <div style='background-color: #F8FAFC; padding: 2rem; border-radius: 10px; height: 300px;'>
+        <h4 style='color: #1F3A5F; margin-bottom: 1rem;'>📈 Análisis Rápido</h4>
+        <div style='color: #4A5568;'>
+        <p>• <strong>Margen Bruto:</strong> {margen_bruto:.1f}%</p>
+        <p>• <strong>EBITDA:</strong> {margen_ebitda:.1f}%</p>
+        <p>• <strong>Eficiencia Operativa:</strong> {eficiencia:.1f}%</p>
+        <p>• <strong>Liquidez:</strong> {liquidez:.1f}x</p>
+        </div>
+    </div>
+    """.format(
+        margen_bruto=calculos['margen_bruto_pct'],
+        margen_ebitda=calculos['margen_ebitda_pct'],
+        eficiencia=(calculos['ebitda_operativo']/calculos['margen_bruto'])*100,
+        liquidez=(calculos['ebitda']/calculos['gastos_financieros']) if calculos['gastos_financieros'] > 0 else 0
+    ), unsafe_allow_html=True)
+
+# Footer premium
 st.markdown("---")
-st.caption(f"Simulador Financiero PORTAWARE • Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+st.markdown(f"""
+<div style='text-align: center; color: #718096; font-size: 0.9rem;'>
+    PORTAWARE Financial Studio • Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} • 
+    <span style='color: #4FD1C5;'>Professional Edition</span>
+</div>
+""", unsafe_allow_html=True)
+
 
 
 
