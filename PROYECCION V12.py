@@ -5,7 +5,7 @@ from datetime import datetime
 
 # --- CONFIGURACIÓN INICIAL ---
 st.set_page_config(
-    page_title="PORTAWARE Financial Studio", 
+    page_title="PORTAWARE Financiero", 
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -132,7 +132,7 @@ col_logo, col_title, col_actions = st.columns([1, 2, 1])
 with col_logo:
     st.markdown("### 🏢 PORTAWARE")
 with col_title:
-    st.markdown("<h1 style='text-align: center; color: #1F3A5F;'>Financial Performance Studio</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color: #1F3A5F;'>Análisis Financiero</h1>", unsafe_allow_html=True)
 with col_actions:
     st.markdown("**💎 Professional Edition**")
 
@@ -202,7 +202,7 @@ with col_controles:
         
         st.markdown("##### 💰 Ingresos")
         st.session_state.ventas_netas = st.number_input(
-            "Ventas Netas (USD)",
+            "Ventas Netas",
             min_value=0.0,
             value=float(st.session_state.ventas_netas),
             step=1000000.0,
@@ -229,7 +229,7 @@ with col_controles:
         st.markdown("##### 💸 Gastos Operativos")
         
         st.session_state.nomina = st.number_input(
-            "Nómina (USD)",
+            "Nómina",
             min_value=0.0,
             value=float(st.session_state.nomina),
             step=100000.0,
@@ -253,7 +253,7 @@ with col_controles:
         )
         
         st.session_state.rentas = st.number_input(
-            "Rentas (USD)",
+            "Rentas",
             min_value=0.0,
             value=float(st.session_state.rentas),
             step=100000.0,
@@ -261,7 +261,7 @@ with col_controles:
         )
         
         st.session_state.otros_gastos = st.number_input(
-            "Otros Gastos (USD)",
+            "Otros Gastos",
             min_value=0.0,
             value=float(st.session_state.otros_gastos),
             step=100000.0,
@@ -411,28 +411,31 @@ with col_pie1:
     st.plotly_chart(fig_pie, use_container_width=True)
 
 with col_pie2:
-    st.markdown("""
+    # Cálculo de indicadores financieros reales
+    margen_operativo = (calculos['ebitda_operativo'] / float(st.session_state.ventas_netas)) * 100
+    cobertura_intereses = calculos['ebitda'] / calculos['gastos_financieros'] if calculos['gastos_financieros'] > 0 else 0
+    
+    st.markdown(f"""
     <div style='background-color: #F8FAFC; padding: 2rem; border-radius: 10px; height: 300px;'>
-        <h4 style='color: #1F3A5F; margin-bottom: 1rem;'>📈 Análisis Rápido</h4>
+        <h4 style='color: #1F3A5F; margin-bottom: 1rem;'>📈 Indicadores Clave</h4>
         <div style='color: #4A5568;'>
-        <p>• <strong>Margen Bruto:</strong> {margen_bruto:.1f}%</p>
-        <p>• <strong>EBITDA:</strong> {margen_ebitda:.1f}%</p>
-        <p>• <strong>Eficiencia Operativa:</strong> {eficiencia:.1f}%</p>
-        <p>• <strong>Liquidez:</strong> {liquidez:.1f}x</p>
+        <p>• <strong>Margen Operativo:</strong> {margen_operativo:.1f}%</p>
+        <p style='font-size: 0.9rem; opacity: 0.8;'>Utilidad operativa vs ventas</p>
+        
+        <p>• <strong>Cobertura Intereses:</strong> {cobertura_intereses:.1f}x</p>
+        <p style='font-size: 0.9rem; opacity: 0.8;'>Capacidad de pago de gastos financieros</p>
+        
+        <p>• <strong>Margen EBITDA:</strong> {calculos['margen_ebitda_pct']:.1f}%</p>
+        <p style='font-size: 0.9rem; opacity: 0.8;'>Rentabilidad operativa antes de intereses</p>
         </div>
     </div>
-    """.format(
-        margen_bruto=calculos['margen_bruto_pct'],
-        margen_ebitda=calculos['margen_ebitda_pct'],
-        eficiencia=(calculos['ebitda_operativo']/calculos['margen_bruto'])*100,
-        liquidez=(calculos['ebitda']/calculos['gastos_financieros']) if calculos['gastos_financieros'] > 0 else 0
-    ), unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 # Footer premium
 st.markdown("---")
 st.markdown(f"""
 <div style='text-align: center; color: #718096; font-size: 0.9rem;'>
-    PORTAWARE Financial Studio • Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} • 
+    PORTAWARE Financiero • Última actualización: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} • 
     <span style='color: #4FD1C5;'>Professional Edition</span>
 </div>
 """, unsafe_allow_html=True)
