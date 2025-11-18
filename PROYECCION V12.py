@@ -52,8 +52,10 @@ st.markdown(f"""
 # --- FUNCIONES DE CÁLCULO ---
 def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fletes, rentas, otros_gastos, pct_gastos_financieros):
     """Calcula todos los valores financieros"""
-    costo = ventas_netas * (pct_costo / 100)
-    margen_bruto = ventas_netas - costo
+    # CORRECCIÓN: Calcular costo correctamente y restarlo de ventas netas
+    costo_ventas = ventas_netas * (pct_costo / 100)
+    margen_bruto = ventas_netas - costo_ventas  # ¡Aquí está la resta!
+    
     comisiones = ventas_netas * (pct_comisiones / 100)
     fletes = ventas_netas * (pct_fletes / 100)
     gasto_total = nomina + comisiones + fletes + rentas + otros_gastos
@@ -65,7 +67,7 @@ def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fl
     margen_ebitda_pct = (ebitda / ventas_netas) * 100 if ventas_netas != 0 else 0
     
     return {
-        'costo': costo,
+        'costo_ventas': costo_ventas,  # Nombre más descriptivo
         'margen_bruto': margen_bruto,
         'comisiones': comisiones,
         'fletes': fletes,
@@ -222,7 +224,16 @@ with col_controles:
             step=0.5,
             help="Porcentaje del costo sobre ventas netas"
         )
-        st.caption(f"Costo calculado: **${calculos['costo']:,.0f}**")
+        
+        # Mostrar desglose del cálculo del margen bruto
+        st.markdown(f"""
+        <div style='background-color: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;'>
+            <p style='margin: 0.2rem 0; font-size: 0.9rem;'><strong>Desglose del Margen Bruto:</strong></p>
+            <p style='margin: 0.2rem 0; font-size: 0.85rem;'>Ventas Netas: <strong>${float(st.session_state.ventas_netas):,.0f}</strong></p>
+            <p style='margin: 0.2rem 0; font-size: 0.85rem;'>Menos Costo de Ventas: <strong>${calculos['costo_ventas']:,.0f}</strong></p>
+            <p style='margin: 0.2rem 0; font-size: 0.85rem;'><strong>Margen Bruto: ${calculos['margen_bruto']:,.0f}</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.markdown("---")
         
@@ -268,7 +279,7 @@ with col_controles:
             format="%f"
         )
         
-        st.markdown(f"**Total Gastos: ${calculos['gasto_total']:,.0f}**")
+        st.markdown(f"**Total Gastos Operativos: ${calculos['gasto_total']:,.0f}**")
         
         st.markdown("---")
         
@@ -291,7 +302,7 @@ with col_visuales:
     categories = ['Ventas Netas', 'Costo de Ventas', 'Margen Bruto', 'Gastos Operativos', 'EBITDA Operativo', 'Gastos Financieros', 'EBITDA Final']
     values = [
         float(st.session_state.ventas_netas),
-        -calculos['costo'],
+        -calculos['costo_ventas'],  # Usar el nombre correcto
         calculos['margen_bruto'],
         -calculos['gasto_total'],
         calculos['ebitda_operativo'],
@@ -333,7 +344,7 @@ with col_visuales:
     # Crear tabla de resultados limpia
     datos_tabla = [
         ["Ventas Netas", f"${float(st.session_state.ventas_netas):,.0f}", "100.0%"],
-        ["Costo de Ventas", f"${calculos['costo']:,.0f}", f"{float(st.session_state.pct_costo):.1f}%"],
+        ["Costo de Ventas", f"${calculos['costo_ventas']:,.0f}", f"{float(st.session_state.pct_costo):.1f}%"],
         ["Margen Bruto", f"${calculos['margen_bruto']:,.0f}", f"{calculos['margen_bruto_pct']:.1f}%"],
         ["", "", ""],
         ["GASTOS OPERATIVOS", "", ""],
@@ -439,6 +450,7 @@ st.markdown(f"""
     <span style='color: #4FD1C5;'>Professional Edition</span>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
