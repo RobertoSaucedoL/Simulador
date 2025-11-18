@@ -444,30 +444,7 @@ with col_analisis2:
     cobertura_intereses = calculos['ebitda'] / calculos['gastos_financieros'] if calculos['gastos_financieros'] > 0 else 0
     eficiencia_operativa = (calculos['ebitda_operativo'] / calculos['margen_bruto']) * 100 if calculos['margen_bruto'] > 0 else 0
     
-    st.markdown("##### 📊 Indicadores Clave")
     
-    st.markdown(f"""
-    <div style='background-color: #F8FAFC; padding: 1.5rem; border-radius: 10px; border-left: 4px solid {COLORES['secondary']};'>
-        <div style='margin-bottom: 1rem;'>
-            <div style='font-size: 0.9rem; color: #4A5568;'>Margen Operativo</div>
-            <div style='font-size: 1.5rem; font-weight: bold; color: {COLORES["primary"]};'>{margen_operativo:.1f}%</div>
-            <div style='font-size: 0.8rem; color: #718096;'>Utilidad operativa vs ventas</div>
-        </div>
-        
-        <div style='margin-bottom: 1rem;'>
-            <div style='font-size: 0.9rem; color: #4A5568;'>Cobertura Intereses</div>
-            <div style='font-size: 1.5rem; font-weight: bold; color: {COLORES["success"]};'>{cobertura_intereses:.1f}x</div>
-            <div style='font-size: 0.8rem; color: #718096;'>Capacidad de pago</div>
-        </div>
-        
-        <div>
-            <div style='font-size: 0.9rem; color: #4A5568;'>Eficiencia Operativa</div>
-            <div style='font-size: 1.5rem; font-weight: bold; color: {COLORES["accent"]};'>{eficiencia_operativa:.1f}%</div>
-            <div style='font-size: 0.8rem; color: #718096;'>EBITDA Op. vs Margen Bruto</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
 # Footer premium
 st.markdown("---")
 st.markdown(f"""
@@ -476,6 +453,7 @@ st.markdown(f"""
     <span style='color: #4FD1C5;'>Professional Edition</span>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
