@@ -426,21 +426,7 @@ with col_pie2:
     margen_operativo = (calculos['ebitda_operativo'] / float(st.session_state.ventas_netas)) * 100
     cobertura_intereses = calculos['ebitda'] / calculos['gastos_financieros'] if calculos['gastos_financieros'] > 0 else 0
     
-    st.markdown(f"""
-    <div style='background-color: #F8FAFC; padding: 2rem; border-radius: 10px; height: 300px;'>
-        <h4 style='color: #1F3A5F; margin-bottom: 1rem;'>📈 Indicadores Clave</h4>
-        <div style='color: #4A5568;'>
-        <p>• <strong>Margen Operativo:</strong> {margen_operativo:.1f}%</p>
-        <p style='font-size: 0.9rem; opacity: 0.8;'>Utilidad operativa vs ventas</p>
-        
-        <p>• <strong>Cobertura Intereses:</strong> {cobertura_intereses:.1f}x</p>
-        <p style='font-size: 0.9rem; opacity: 0.8;'>Capacidad de pago de gastos financieros</p>
-        
-        <p>• <strong>Margen EBITDA:</strong> {calculos['margen_ebitda_pct']:.1f}%</p>
-        <p style='font-size: 0.9rem; opacity: 0.8;'>Rentabilidad operativa antes de intereses</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+
 
 # Footer premium
 st.markdown("---")
@@ -450,6 +436,7 @@ st.markdown(f"""
     <span style='color: #4FD1C5;'>Professional Edition</span>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
