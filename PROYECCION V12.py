@@ -19,7 +19,8 @@ COLORES = {
     'warning': '#ED8936',
     'error': '#F56565',
     'dark': '#2D3748',
-    'light': '#F7FAFC'
+    'light': '#F7FAFC',
+    'highlight': '#FFD700'
 }
 
 # Estilos CSS personalizados
@@ -45,6 +46,10 @@ st.markdown(f"""
         color: {COLORES['primary']};
         font-weight: 600;
         margin-bottom: 1rem;
+    }}
+    .highlight-row {{
+        background-color: #E8F5E8 !important;
+        font-weight: bold !important;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -341,11 +346,11 @@ with col_visuales:
     # Tabla de resultados mejorada
     st.markdown("<div class='section-title'>DETALLE FINANCIERO</div>", unsafe_allow_html=True)
     
-    # Crear tabla de resultados limpia
+    # Crear tabla de resultados con filas destacadas
     datos_tabla = [
         ["Ventas Netas", f"${float(st.session_state.ventas_netas):,.0f}", "100.0%"],
         ["Costo de Ventas", f"${calculos['costo_ventas']:,.0f}", f"{float(st.session_state.pct_costo):.1f}%"],
-        ["Margen Bruto", f"${calculos['margen_bruto']:,.0f}", f"{calculos['margen_bruto_pct']:.1f}%"],
+        ["MARGEN BRUTO", f"${calculos['margen_bruto']:,.0f}", f"<b>{calculos['margen_bruto_pct']:.1f}%</b>"],
         ["", "", ""],
         ["GASTOS OPERATIVOS", "", ""],
         ["Nómina", f"${float(st.session_state.nomina):,.0f}", f"{(float(st.session_state.nomina)/float(st.session_state.ventas_netas))*100:.1f}%"],
@@ -353,46 +358,57 @@ with col_visuales:
         ["Fletes", f"${calculos['fletes']:,.0f}", f"{float(st.session_state.pct_fletes):.1f}%"],
         ["Rentas", f"${float(st.session_state.rentas):,.0f}", f"{(float(st.session_state.rentas)/float(st.session_state.ventas_netas))*100:.1f}%"],
         ["Otros Gastos", f"${float(st.session_state.otros_gastos):,.0f}", f"{(float(st.session_state.otros_gastos)/float(st.session_state.ventas_netas))*100:.1f}%"],
-        ["Total Gastos Operativos", f"${calculos['gasto_total']:,.0f}", f"{(calculos['gasto_total']/float(st.session_state.ventas_netas))*100:.1f}%"],
+        ["TOTAL GASTOS OPERATIVOS", f"${calculos['gasto_total']:,.0f}", f"<b>{(calculos['gasto_total']/float(st.session_state.ventas_netas))*100:.1f}%</b>"],
         ["", "", ""],
-        ["EBITDA Operativo", f"${calculos['ebitda_operativo']:,.0f}", f"{(calculos['ebitda_operativo']/float(st.session_state.ventas_netas))*100:.1f}%"],
+        ["EBITDA OPERATIVO", f"${calculos['ebitda_operativo']:,.0f}", f"<b>{(calculos['ebitda_operativo']/float(st.session_state.ventas_netas))*100:.1f}%</b>"],
         ["Gastos Financieros", f"${calculos['gastos_financieros']:,.0f}", f"{float(st.session_state.pct_gastos_financieros):.1f}%"],
-        ["EBITDA Final", f"${calculos['ebitda']:,.0f}", f"{calculos['margen_ebitda_pct']:.1f}%"]
+        ["EBITDA FINAL", f"${calculos['ebitda']:,.0f}", f"<b>{calculos['margen_ebitda_pct']:.1f}%</b>"]
     ]
     
-    # Crear tabla con diseño premium
+    # Definir colores de fondo para filas destacadas
+    fill_colors = []
+    for i, fila in enumerate(datos_tabla):
+        if any(keyword in fila[0] for keyword in ['MARGEN BRUTO', 'TOTAL GASTOS OPERATIVOS', 'EBITDA OPERATIVO', 'EBITDA FINAL']):
+            fill_colors.append(['#E8F5E8', '#E8F5E8', '#E8F5E8'])  # Verde claro para destacar
+        else:
+            fill_colors.append(['white', '#F8FAFC', '#F8FAFC'])
+    
+    # Crear tabla con diseño premium y filas destacadas
     fig_tabla = go.Figure(data=[go.Table(
         columnwidth=[2, 1.5, 1],
         header=dict(
             values=['<b>CONCEPTO</b>', '<b>MONTO</b>', '<b>%</b>'],
             fill_color=COLORES['primary'],
             align=['left', 'right', 'right'],
-            font=dict(color='white', size=12, family="Arial")
+            font=dict(color='white', size=13, family="Arial", weight="bold")
         ),
         cells=dict(
             values=[[fila[0] for fila in datos_tabla], 
                    [fila[1] for fila in datos_tabla], 
                    [fila[2] for fila in datos_tabla]],
             align=['left', 'right', 'right'],
-            fill_color=['white', '#F8FAFC', '#F8FAFC'],
-            font=dict(size=11, family="Arial"),
-            height=28
+            fill_color=[[fila[i] for fila in fill_colors] for i in range(3)],
+            font=dict(size=12, family="Arial"),
+            height=30
         )
     )])
     
     fig_tabla.update_layout(
-        height=450,
+        height=500,
         margin=dict(l=0, r=0, t=0, b=0)
     )
     
     st.plotly_chart(fig_tabla, use_container_width=True)
 
-# Gráfico de composición de gastos
-st.markdown("<div class='section-title'>COMPOSICIÓN DE GASTOS OPERATIVOS</div>", unsafe_allow_html=True)
+# Nueva sección combinada: Composición de Gastos + Indicadores Clave
+st.markdown("<div class='section-title'>ANÁLISIS DE EFICIENCIA OPERATIVA</div>", unsafe_allow_html=True)
 
-col_pie1, col_pie2 = st.columns([2, 1])
+col_analisis1, col_analisis2 = st.columns([2, 1])
 
-with col_pie1:
+with col_analisis1:
+    # Gráfico de composición de gastos operativos
+    st.markdown("##### 🥧 Composición de Gastos Operativos")
+    
     datos_gastos = [
         dict(name='Nómina', value=float(st.session_state.nomina)),
         dict(name='Comisiones', value=calculos['comisiones']),
@@ -409,24 +425,48 @@ with col_pie1:
                       COLORES['success'], COLORES['warning']],
         textinfo='percent+label',
         textposition='inside',
-        insidetextorientation='radial'
+        insidetextorientation='radial',
+        hovertemplate='<b>%{label}</b><br>Monto: $%{value:,.0f}<br>Porcentaje: %{percent}<extra></extra>'
     )])
     
     fig_pie.update_layout(
-        height=300,
-        margin=dict(l=20, r=20, t=20, b=20),
+        height=350,
+        margin=dict(l=20, r=20, t=40, b=20),
         showlegend=False,
-        font=dict(size=12, family="Arial")
+        font=dict(size=11, family="Arial")
     )
     
     st.plotly_chart(fig_pie, use_container_width=True)
 
-with col_pie2:
+with col_analisis2:
     # Cálculo de indicadores financieros reales
     margen_operativo = (calculos['ebitda_operativo'] / float(st.session_state.ventas_netas)) * 100
     cobertura_intereses = calculos['ebitda'] / calculos['gastos_financieros'] if calculos['gastos_financieros'] > 0 else 0
+    eficiencia_operativa = (calculos['ebitda_operativo'] / calculos['margen_bruto']) * 100 if calculos['margen_bruto'] > 0 else 0
     
-
+    st.markdown("##### 📊 Indicadores Clave")
+    
+    st.markdown(f"""
+    <div style='background-color: #F8FAFC; padding: 1.5rem; border-radius: 10px; border-left: 4px solid {COLORES['secondary']};'>
+        <div style='margin-bottom: 1rem;'>
+            <div style='font-size: 0.9rem; color: #4A5568;'>Margen Operativo</div>
+            <div style='font-size: 1.5rem; font-weight: bold; color: {COLORES["primary"]};'>{margen_operativo:.1f}%</div>
+            <div style='font-size: 0.8rem; color: #718096;'>Utilidad operativa vs ventas</div>
+        </div>
+        
+        <div style='margin-bottom: 1rem;'>
+            <div style='font-size: 0.9rem; color: #4A5568;'>Cobertura Intereses</div>
+            <div style='font-size: 1.5rem; font-weight: bold; color: {COLORES["success"]};'>{cobertura_intereses:.1f}x</div>
+            <div style='font-size: 0.8rem; color: #718096;'>Capacidad de pago</div>
+        </div>
+        
+        <div>
+            <div style='font-size: 0.9rem; color: #4A5568;'>Eficiencia Operativa</div>
+            <div style='font-size: 1.5rem; font-weight: bold; color: {COLORES["accent"]};'>{eficiencia_operativa:.1f}%</div>
+            <div style='font-size: 0.8rem; color: #718096;'>EBITDA Op. vs Margen Bruto</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Footer premium
 st.markdown("---")
@@ -436,6 +476,7 @@ st.markdown(f"""
     <span style='color: #4FD1C5;'>Professional Edition</span>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 
