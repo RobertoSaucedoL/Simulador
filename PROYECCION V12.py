@@ -67,19 +67,19 @@ const SimuladorFinanciero = () => {
             role: "user",
             content: `Analiza esta situación financiera de PORTAWARE (fabricante de artículos de plástico para el hogar) y proporciona un análisis ejecutivo conciso (máximo 150 palabras):
 
-Ventas Netas: $${ventasNetas.toLocaleString()}
-Costo (${pctCosto}%): $${calculos.costo.toLocaleString()}
-Margen Bruto: $${calculos.margenBruto.toLocaleString()} (${calculos.margenBrutoPct.toFixed(1)}%)
-Gastos Totales: $${calculos.gastoTotal.toLocaleString()}
-- Nómina: $${nomina.toLocaleString()}
-- Comisiones (${pctComisiones}%): $${calculos.comisiones.toLocaleString()}
-- Fletes (${pctFletes}%): $${calculos.fletes.toLocaleString()}
-- Rentas: $${rentas.toLocaleString()}
-- Otros: $${otrosGastos.toLocaleString()}
-EBITDA Operativo: $${calculos.ebitdaOperativo.toLocaleString()}
-Gastos Financieros (${pctGastosFinancieros}%): $${calculos.gastosFinancieros.toLocaleString()}
-EBITDA Final: $${calculos.ebitda.toLocaleString()} (${calculos.margenEbitdaPct.toFixed(1)}%)
-Punto de Equilibrio: $${calculos.puntoEquilibrio.toLocaleString()}
+Ventas Netas: ${ventasNetas.toLocaleString()}
+Costo (${pctCosto}%): ${calculos.costo.toLocaleString()}
+Margen Bruto: ${calculos.margenBruto.toLocaleString()} (${calculos.margenBrutoPct.toFixed(1)}%)
+Gastos Totales: ${calculos.gastoTotal.toLocaleString()}
+- Nómina: ${nomina.toLocaleString()}
+- Comisiones (${pctComisiones}%): ${calculos.comisiones.toLocaleString()}
+- Fletes (${pctFletes}%): ${calculos.fletes.toLocaleString()}
+- Rentas: ${rentas.toLocaleString()}
+- Otros: ${otrosGastos.toLocaleString()}
+EBITDA Operativo: ${calculos.ebitdaOperativo.toLocaleString()}
+Gastos Financieros (${pctGastosFinancieros}%): ${calculos.gastosFinancieros.toLocaleString()}
+EBITDA Final: ${calculos.ebitda.toLocaleString()} (${calculos.margenEbitdaPct.toFixed(1)}%)
+Punto de Equilibrio: ${calculos.puntoEquilibrio.toLocaleString()}
 
 Proporciona: 1) Diagnóstico de salud financiera, 2) 2-3 recomendaciones específicas para mejorar rentabilidad, 3) Análisis del punto de equilibrio.`
           }]
