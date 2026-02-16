@@ -2,230 +2,183 @@ import streamlit as st
 import plotly.graph_objects as go
 from datetime import datetime
 
-# --- CONFIGURACIÓN ---
+# CONFIGURACIÓN
 st.set_page_config(page_title="PORTAWARE Financiero", layout="wide")
 
-# --- FUNCIONES ---
-def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fletes, rentas, otros_gastos, pct_gastos_financieros):
-    costo_ventas = ventas_netas * (pct_costo / 100)
-    margen_bruto = ventas_netas - costo_ventas
-    comisiones = ventas_netas * (pct_comisiones / 100)
-    fletes = ventas_netas * (pct_fletes / 100)
-    gasto_total = nomina + comisiones + fletes + rentas + otros_gastos
-    ebitda_operativo = margen_bruto - gasto_total
-    gastos_financieros = ventas_netas * (pct_gastos_financieros / 100)
-    ebitda = ebitda_operativo - gastos_financieros
-    margen_bruto_pct = (margen_bruto / ventas_netas) * 100 if ventas_netas != 0 else 0
-    margen_ebitda_pct = (ebitda / ventas_netas) * 100 if ventas_netas != 0 else 0
+# FUNCIONES
+def calcular(ventas, costo_pct, nom, com_pct, fle_pct, rent, otros, gf_pct):
+    costo = ventas * (costo_pct / 100)
+    margen = ventas - costo
+    comisiones = ventas * (com_pct / 100)
+    fletes = ventas * (fle_pct / 100)
+    gasto_total = nom + comisiones + fletes + rent + otros
+    ebitda_op = margen - gasto_total
+    gf = ventas * (gf_pct / 100)
+    ebitda = ebitda_op - gf
+    margen_pct = (margen / ventas) * 100 if ventas > 0 else 0
+    ebitda_pct = (ebitda / ventas) * 100 if ventas > 0 else 0
     
     return {
-        'costo_ventas': costo_ventas,
-        'margen_bruto': margen_bruto,
-        'comisiones': comisiones,
-        'fletes': fletes,
-        'gasto_total': gasto_total,
-        'ebitda_operativo': ebitda_operativo,
-        'gastos_financieros': gastos_financieros,
-        'ebitda': ebitda,
-        'margen_bruto_pct': margen_bruto_pct,
-        'margen_ebitda_pct': margen_ebitda_pct
+        'costo': costo, 'margen': margen, 'comisiones': comisiones,
+        'fletes': fletes, 'gasto_total': gasto_total, 'ebitda_op': ebitda_op,
+        'gf': gf, 'ebitda': ebitda, 'margen_pct': margen_pct, 'ebitda_pct': ebitda_pct
     }
 
-# --- INICIALIZAR SESSION STATE ---
-if 'ventas_netas' not in st.session_state:
-    st.session_state.ventas_netas = 189878959
-if 'pct_costo' not in st.session_state:
-    st.session_state.pct_costo = 47.0
-if 'nomina' not in st.session_state:
-    st.session_state.nomina = 25800000
-if 'pct_comisiones' not in st.session_state:
-    st.session_state.pct_comisiones = 3.0
-if 'pct_fletes' not in st.session_state:
-    st.session_state.pct_fletes = 6.0
-if 'rentas' not in st.session_state:
-    st.session_state.rentas = 6711000
-if 'otros_gastos' not in st.session_state:
-    st.session_state.otros_gastos = 5446936
-if 'pct_gastos_financieros' not in st.session_state:
-    st.session_state.pct_gastos_financieros = 1.0
-
-# --- CALCULAR ---
-calculos = calcular_financieros(
-    st.session_state.ventas_netas,
-    st.session_state.pct_costo,
-    st.session_state.nomina,
-    st.session_state.pct_comisiones,
-    st.session_state.pct_fletes,
-    st.session_state.rentas,
-    st.session_state.otros_gastos,
-    st.session_state.pct_gastos_financieros
-)
-
-# --- INTERFAZ ---
+# TITULO
 st.title("🏢 PORTAWARE - Análisis Financiero")
+st.write("Simulador financiero interactivo")
+st.divider()
 
-# Métricas principales
-col1, col2, col3 = st.columns(3)
-col1.metric("Ventas Netas", f"${st.session_state.ventas_netas/1_000_000:.1f}M")
-col2.metric("Margen Bruto", f"${calculos['margen_bruto']/1_000_000:.1f}M", f"{calculos['margen_bruto_pct']:.1f}%")
-col3.metric("EBITDA", f"${calculos['ebitda']/1_000_000:.1f}M", f"{calculos['margen_ebitda_pct']:.1f}%")
+# ESCENARIOS
+st.write("**Selecciona un Escenario:**")
+col_e1, col_e2, col_e3, col_e4 = st.columns(4)
+
+escenario = "manual"
+if col_e1.button("🚀 Optimista"):
+    escenario = "optimista"
+elif col_e2.button("🛡️ Conservador"):
+    escenario = "conservador"
+elif col_e3.button("⚡ Base"):
+    escenario = "base"
+
+# VALORES SEGÚN ESCENARIO
+if escenario == "optimista":
+    v_default = 189878959 * 1.15
+    c_default = 45.0
+    n_default = 25800000
+    com_default = 3.0
+    f_default = 5.5
+    r_default = 6711000
+    o_default = 5446936
+    gf_default = 0.8
+elif escenario == "conservador":
+    v_default = 189878959 * 0.95
+    c_default = 48.0
+    n_default = 25800000
+    com_default = 3.0
+    f_default = 6.5
+    r_default = 6711000
+    o_default = 5446936
+    gf_default = 1.0
+else:  # base o manual
+    v_default = 189878959
+    c_default = 47.0
+    n_default = 25800000
+    com_default = 3.0
+    f_default = 6.0
+    r_default = 6711000
+    o_default = 5446936
+    gf_default = 1.0
+
+col_e4.info("💡 O ajusta manualmente")
 
 st.divider()
 
-# Botones de escenario
-st.write("**Escenarios:**")
-c1, c2, c3 = st.columns(3)
+# LAYOUT
+izq, der = st.columns([1, 2])
 
-if c1.button('🚀 Optimista', use_container_width=True):
-    st.session_state.ventas_netas = 189878959 * 1.15
-    st.session_state.pct_costo = 45.0
-    st.session_state.pct_fletes = 5.5
-    st.session_state.pct_gastos_financieros = 0.8
+# PANEL IZQUIERDO - CONTROLES
+with izq:
+    st.subheader("⚙️ Controles")
+    
+    st.write("**💰 Ingresos**")
+    ventas = st.number_input("Ventas Netas ($)", 0.0, 999999999.0, v_default, 1000000.0)
+    
+    st.write("**🏭 Costos**")
+    costo_pct = st.slider("Costo de Ventas (%)", 30.0, 70.0, c_default, 0.5)
+    
+    st.write("**💸 Gastos Operativos**")
+    nomina = st.number_input("Nómina ($)", 0.0, 999999999.0, n_default, 100000.0)
+    comisiones_pct = st.slider("Comisiones (%)", 0.0, 10.0, com_default, 0.25)
+    fletes_pct = st.slider("Fletes (%)", 0.0, 15.0, f_default, 0.25)
+    rentas = st.number_input("Rentas ($)", 0.0, 999999999.0, r_default, 100000.0)
+    otros = st.number_input("Otros Gastos ($)", 0.0, 999999999.0, o_default, 100000.0)
+    
+    st.write("**🏦 Financieros**")
+    gf_pct = st.slider("Gastos Financieros (%)", 0.0, 5.0, gf_default, 0.1)
 
-if c2.button('🛡️ Conservador', use_container_width=True):
-    st.session_state.ventas_netas = 189878959 * 0.95
-    st.session_state.pct_costo = 48.0
-    st.session_state.pct_fletes = 6.5
+# CALCULAR
+r = calcular(ventas, costo_pct, nomina, comisiones_pct, fletes_pct, rentas, otros, gf_pct)
 
-if c3.button('⚡ Reset', use_container_width=True):
-    st.session_state.ventas_netas = 189878959
-    st.session_state.pct_costo = 47.0
-    st.session_state.nomina = 25800000
-    st.session_state.pct_comisiones = 3.0
-    st.session_state.pct_fletes = 6.0
-    st.session_state.rentas = 6711000
-    st.session_state.otros_gastos = 5446936
-    st.session_state.pct_gastos_financieros = 1.0
-
-st.divider()
-
-# Layout principal
-col_left, col_right = st.columns([1, 2])
-
-# CONTROLES
-with col_left:
-    st.subheader("Panel de Control")
+# PANEL DERECHO - VISUALIZACIÓN
+with der:
+    st.subheader("📊 Resultados")
     
-    st.write("**Ingresos**")
-    ventas = st.number_input("Ventas Netas", min_value=0.0, value=st.session_state.ventas_netas, step=1000000.0)
-    st.session_state.ventas_netas = ventas
+    # Métricas
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Ventas", f"${ventas/1e6:.1f}M")
+    m2.metric("Margen Bruto", f"${r['margen']/1e6:.1f}M", f"{r['margen_pct']:.1f}%")
+    m3.metric("EBITDA", f"${r['ebitda']/1e6:.1f}M", f"{r['ebitda_pct']:.1f}%")
     
-    st.write("**Costos**")
-    costo = st.slider("Costo de Ventas (%)", 30.0, 70.0, st.session_state.pct_costo, 0.5)
-    st.session_state.pct_costo = costo
+    # Gráfico Cascada
+    st.write("**Análisis de Cascada**")
     
-    st.write("**Gastos Operativos**")
-    nomina = st.number_input("Nómina", min_value=0.0, value=st.session_state.nomina, step=100000.0)
-    st.session_state.nomina = nomina
-    
-    comisiones = st.slider("Comisiones (%)", 0.0, 10.0, st.session_state.pct_comisiones, 0.25)
-    st.session_state.pct_comisiones = comisiones
-    
-    fletes = st.slider("Fletes (%)", 0.0, 15.0, st.session_state.pct_fletes, 0.25)
-    st.session_state.pct_fletes = fletes
-    
-    rentas = st.number_input("Rentas", min_value=0.0, value=st.session_state.rentas, step=100000.0)
-    st.session_state.rentas = rentas
-    
-    otros = st.number_input("Otros Gastos", min_value=0.0, value=st.session_state.otros_gastos, step=100000.0)
-    st.session_state.otros_gastos = otros
-    
-    st.write("**Financieros**")
-    gf = st.slider("Gastos Financieros (%)", 0.0, 5.0, st.session_state.pct_gastos_financieros, 0.1)
-    st.session_state.pct_gastos_financieros = gf
-
-# VISUALIZACIÓN
-with col_right:
-    st.subheader("Gráfico de Cascada")
-    
-    # Gráfico simplificado
-    fig = go.Figure(go.Waterfall(
-        name="",
+    fig_w = go.Figure(go.Waterfall(
         orientation="v",
         measure=['absolute', 'relative', 'total', 'relative', 'total', 'relative', 'total'],
-        x=['Ventas', 'Costo', 'Margen Bruto', 'Gastos Op', 'EBITDA Op', 'G. Financ', 'EBITDA'],
-        y=[
-            st.session_state.ventas_netas,
-            -calculos['costo_ventas'],
-            calculos['margen_bruto'],
-            -calculos['gasto_total'],
-            calculos['ebitda_operativo'],
-            -calculos['gastos_financieros'],
-            calculos['ebitda']
-        ],
-        text=[f"${x/1_000_000:.1f}M" for x in [
-            st.session_state.ventas_netas,
-            -calculos['costo_ventas'],
-            calculos['margen_bruto'],
-            -calculos['gasto_total'],
-            calculos['ebitda_operativo'],
-            -calculos['gastos_financieros'],
-            calculos['ebitda']
-        ]],
+        x=['Ventas', 'Costo', 'Margen', 'Gastos', 'EBITDA Op', 'G.Fin', 'EBITDA'],
+        y=[ventas, -r['costo'], r['margen'], -r['gasto_total'], r['ebitda_op'], -r['gf'], r['ebitda']],
+        text=[f"${x/1e6:.1f}M" for x in [ventas, -r['costo'], r['margen'], -r['gasto_total'], r['ebitda_op'], -r['gf'], r['ebitda']]],
         textposition="outside"
     ))
+    fig_w.update_layout(height=350, showlegend=False)
+    st.plotly_chart(fig_w, use_container_width=True)
     
-    fig.update_layout(height=400, showlegend=False)
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Tabla simple
-    st.subheader("Detalle Financiero")
-    
-    st.write(f"**Ventas Netas:** ${st.session_state.ventas_netas:,.0f} (100%)")
-    st.write(f"**Costo de Ventas:** ${calculos['costo_ventas']:,.0f} ({st.session_state.pct_costo:.1f}%)")
-    st.write(f"**Margen Bruto:** ${calculos['margen_bruto']:,.0f} ({calculos['margen_bruto_pct']:.1f}%)")
-    st.write("")
-    st.write("**Gastos Operativos:**")
-    st.write(f"- Nómina: ${st.session_state.nomina:,.0f}")
-    st.write(f"- Comisiones: ${calculos['comisiones']:,.0f}")
-    st.write(f"- Fletes: ${calculos['fletes']:,.0f}")
-    st.write(f"- Rentas: ${st.session_state.rentas:,.0f}")
-    st.write(f"- Otros: ${st.session_state.otros_gastos:,.0f}")
-    st.write(f"**Total Gastos:** ${calculos['gasto_total']:,.0f}")
-    st.write("")
-    st.write(f"**EBITDA Operativo:** ${calculos['ebitda_operativo']:,.0f}")
-    st.write(f"**Gastos Financieros:** ${calculos['gastos_financieros']:,.0f}")
-    st.write(f"**EBITDA Final:** ${calculos['ebitda']:,.0f} ({calculos['margen_ebitda_pct']:.1f}%)")
+    # Detalle
+    st.write("**Detalle Financiero**")
+    detalle = f"""
+Ventas Netas: ${ventas:,.0f} (100%)
+Costo de Ventas: ${r['costo']:,.0f} ({costo_pct:.1f}%)
+MARGEN BRUTO: ${r['margen']:,.0f} ({r['margen_pct']:.1f}%)
+
+Gastos Operativos:
+  • Nómina: ${nomina:,.0f}
+  • Comisiones: ${r['comisiones']:,.0f}
+  • Fletes: ${r['fletes']:,.0f}
+  • Rentas: ${rentas:,.0f}
+  • Otros: ${otros:,.0f}
+  Total: ${r['gasto_total']:,.0f}
+
+EBITDA Operativo: ${r['ebitda_op']:,.0f}
+Gastos Financieros: ${r['gf']:,.0f}
+EBITDA FINAL: ${r['ebitda']:,.0f} ({r['ebitda_pct']:.1f}%)
+    """
+    st.text(detalle)
 
 st.divider()
 
-# Análisis
-st.subheader("Análisis de Eficiencia")
+# ANÁLISIS
+st.subheader("💡 Análisis Adicional")
 
-ca, cb = st.columns(2)
+an1, an2 = st.columns(2)
 
-with ca:
-    # Gráfico de pastel simplificado
-    fig_pie = go.Figure(go.Pie(
+with an1:
+    st.write("**Composición de Gastos**")
+    
+    fig_p = go.Figure(go.Pie(
         labels=['Nómina', 'Comisiones', 'Fletes', 'Rentas', 'Otros'],
-        values=[
-            st.session_state.nomina,
-            calculos['comisiones'],
-            calculos['fletes'],
-            st.session_state.rentas,
-            st.session_state.otros_gastos
-        ],
+        values=[nomina, r['comisiones'], r['fletes'], rentas, otros],
         hole=0.4
     ))
-    fig_pie.update_layout(height=300, showlegend=True)
-    st.plotly_chart(fig_pie, use_container_width=True)
+    fig_p.update_layout(height=300)
+    st.plotly_chart(fig_p, use_container_width=True)
 
-with cb:
-    st.write("**Indicadores:**")
-    margen_op = (calculos['ebitda_operativo'] / st.session_state.ventas_netas) * 100
-    st.metric("Margen Operativo", f"{margen_op:.1f}%")
+with an2:
+    st.write("**Indicadores**")
     
-    if calculos['gastos_financieros'] > 0:
-        cobertura = calculos['ebitda'] / calculos['gastos_financieros']
-        st.metric("Cobertura Intereses", f"{cobertura:.1f}x")
+    marg_op = (r['ebitda_op'] / ventas) * 100 if ventas > 0 else 0
+    st.metric("Margen Operativo", f"{marg_op:.1f}%")
     
-    if calculos['margen_ebitda_pct'] > 15:
-        st.success("Salud Financiera: Excelente")
-    elif calculos['margen_ebitda_pct'] > 10:
-        st.warning("Salud Financiera: Bueno")
+    if r['gf'] > 0:
+        cob = r['ebitda'] / r['gf']
+        st.metric("Cobertura", f"{cob:.1f}x")
+    
+    if r['ebitda_pct'] > 15:
+        st.success("🟢 Excelente")
+    elif r['ebitda_pct'] > 10:
+        st.warning("🟡 Bueno")
     else:
-        st.error("Salud Financiera: Requiere Atención")
+        st.error("🔴 Atención")
 
 st.caption(f"Actualizado: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-
 
