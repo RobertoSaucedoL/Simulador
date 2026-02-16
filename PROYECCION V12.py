@@ -36,12 +36,6 @@ st.markdown(f"""
         color: white;
         box-shadow: 0 4px 20px rgba(0,0,0,0.1);
     }}
-    .control-panel {{
-        background-color: {COLORES['light']};
-        padding: 1.5rem;
-        border-radius: 15px;
-        border-left: 4px solid {COLORES['secondary']};
-    }}
     .section-title {{
         color: {COLORES['primary']};
         font-weight: 600;
@@ -57,9 +51,8 @@ st.markdown(f"""
 # --- FUNCIONES DE CÁLCULO ---
 def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fletes, rentas, otros_gastos, pct_gastos_financieros):
     """Calcula todos los valores financieros"""
-    # CORRECCIÓN: Calcular costo correctamente y restarlo de ventas netas
     costo_ventas = ventas_netas * (pct_costo / 100)
-    margen_bruto = ventas_netas - costo_ventas  # ¡Aquí está la resta!
+    margen_bruto = ventas_netas - costo_ventas
     
     comisiones = ventas_netas * (pct_comisiones / 100)
     fletes = ventas_netas * (pct_fletes / 100)
@@ -72,7 +65,7 @@ def calcular_financieros(ventas_netas, pct_costo, nomina, pct_comisiones, pct_fl
     margen_ebitda_pct = (ebitda / ventas_netas) * 100 if ventas_netas != 0 else 0
     
     return {
-        'costo_ventas': costo_ventas,  # Nombre más descriptivo
+        'costo_ventas': costo_ventas,
         'margen_bruto': margen_bruto,
         'comisiones': comisiones,
         'fletes': fletes,
@@ -204,9 +197,8 @@ col_controles, col_visuales = st.columns([1, 2])
 with col_controles:
     st.markdown("<div class='section-title'>PANEL DE CONTROL</div>", unsafe_allow_html=True)
     
+    # CORRECCIÓN: Usar st.container() sin tags HTML manuales
     with st.container():
-        st.markdown("<div class='control-panel'>", unsafe_allow_html=True)
-        
         st.markdown("##### 💰 Ingresos")
         st.session_state.ventas_netas = st.number_input(
             "Ventas Netas",
@@ -296,18 +288,16 @@ with col_controles:
             value=float(st.session_state.pct_gastos_financieros),
             step=0.1
         )
-        
-        st.markdown("</div>", unsafe_allow_html=True)
 
 with col_visuales:
-    # Gráfico de Cascada Corregido
+    # Gráfico de Cascada
     st.markdown("<div class='section-title'>ANÁLISIS DE RENTABILIDAD</div>", unsafe_allow_html=True)
     
     # Datos para el gráfico de cascada
     categories = ['Ventas Netas', 'Costo de Ventas', 'Margen Bruto', 'Gastos Operativos', 'EBITDA Operativo', 'Gastos Financieros', 'EBITDA Final']
     values = [
         float(st.session_state.ventas_netas),
-        -calculos['costo_ventas'],  # Usar el nombre correcto
+        -calculos['costo_ventas'],
         calculos['margen_bruto'],
         -calculos['gasto_total'],
         calculos['ebitda_operativo'],
@@ -369,7 +359,7 @@ with col_visuales:
     fill_colors = []
     for i, fila in enumerate(datos_tabla):
         if any(keyword in fila[0] for keyword in ['MARGEN BRUTO', 'TOTAL GASTOS OPERATIVOS', 'EBITDA OPERATIVO', 'EBITDA FINAL']):
-            fill_colors.append(['#E8F5E8', '#E8F5E8', '#E8F5E8'])  # Verde claro para destacar
+            fill_colors.append(['#E8F5E8', '#E8F5E8', '#E8F5E8'])
         else:
             fill_colors.append(['white', '#F8FAFC', '#F8FAFC'])
     
@@ -439,12 +429,51 @@ with col_analisis1:
     st.plotly_chart(fig_pie, use_container_width=True)
 
 with col_analisis2:
-    # Cálculo de indicadores financieros reales
+    # CORRECCIÓN: Completar la sección de indicadores clave
+    st.markdown("##### 📊 Indicadores Clave")
+    
+    # Cálculo de indicadores financieros
     margen_operativo = (calculos['ebitda_operativo'] / float(st.session_state.ventas_netas)) * 100
     cobertura_intereses = calculos['ebitda'] / calculos['gastos_financieros'] if calculos['gastos_financieros'] > 0 else 0
     eficiencia_operativa = (calculos['ebitda_operativo'] / calculos['margen_bruto']) * 100 if calculos['margen_bruto'] > 0 else 0
     
+    # Mostrar métricas
+    st.metric(
+        label="Margen Operativo",
+        value=f"{margen_operativo:.1f}%",
+        help="EBITDA Operativo / Ventas Netas"
+    )
     
+    st.metric(
+        label="Cobertura de Intereses",
+        value=f"{cobertura_intereses:.1f}x",
+        help="EBITDA / Gastos Financieros"
+    )
+    
+    st.metric(
+        label="Eficiencia Operativa",
+        value=f"{eficiencia_operativa:.1f}%",
+        help="EBITDA Operativo / Margen Bruto"
+    )
+    
+    # Indicador visual de salud financiera
+    if calculos['margen_ebitda_pct'] > 15:
+        salud = "🟢 Excelente"
+        color = COLORES['success']
+    elif calculos['margen_ebitda_pct'] > 10:
+        salud = "🟡 Bueno"
+        color = COLORES['warning']
+    else:
+        salud = "🔴 Atención"
+        color = COLORES['error']
+    
+    st.markdown(f"""
+    <div style='background-color: {color}; color: white; padding: 1rem; border-radius: 8px; text-align: center; margin-top: 1rem;'>
+        <strong>Salud Financiera</strong><br>
+        <span style='font-size: 1.2rem;'>{salud}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
 # Footer premium
 st.markdown("---")
 st.markdown(f"""
@@ -453,9 +482,6 @@ st.markdown(f"""
     <span style='color: #4FD1C5;'>Professional Edition</span>
 </div>
 """, unsafe_allow_html=True)
-
-
-
 
 
 
